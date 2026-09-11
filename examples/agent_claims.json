@@ -1,0 +1,5 @@
+{
+  "claims": [
+    {"id": "total-invoices", "scope": "all_period_records", "record_ids": ["invoice-1", "invoice-2"], "amount": "300.00", "currency": "EUR", "period": "2026-09"}
+  ]
+}

@@ -7,6 +7,17 @@ from holco_finance_controls import plan_dataset, run_dataset
 
 
 class SuiteTests(unittest.TestCase):
+    def test_resuming_cannot_hide_an_earlier_failure(self):
+        cases = [{"case_id": "bad", "expected_amount": 1, "reported_amount": 2},
+                 {"case_id": "good", "expected_amount": 1, "reported_amount": 1}]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "cases.json"
+            path.write_text(json.dumps({"cases": cases}))
+            first = run_dataset(path, max_cases=1)
+            final = run_dataset(path, start_at=1, expected_source_hash=first.source_hash)
+        self.assertEqual(final.summary()["outcomes"]["FAIL"], 1)
+        self.assertEqual(final.summary()["executed_cases"], 2)
+
     def test_versioned_dataset_summary(self) -> None:
         payload = {
             "schema_version": "1.0",

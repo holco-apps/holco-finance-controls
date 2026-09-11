@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+import math
 from typing import Any
 
 
@@ -30,6 +31,11 @@ class Case:
     called_tools: tuple[str, ...] = ()
     forbidden_tools: tuple[str, ...] = ()
     evidence_hashes: tuple[tuple[str, str], ...] = ()
+
+    def __post_init__(self):
+        if any(isinstance(v, bool) or not math.isfinite(v) for v in
+               (self.expected_amount, self.reported_amount, self.tolerance)) or self.tolerance < 0:
+            raise ValueError("amounts must be finite and tolerance nonnegative")
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "Case":

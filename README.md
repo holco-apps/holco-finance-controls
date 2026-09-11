@@ -9,6 +9,38 @@ This public repository is a deliberately isolated technical exhibit. It uses
 only synthetic data and contains no HOLCO production code, credentials, client
 names or internal endpoints.
 
+## Persistent engine and MCP (0.3)
+
+The executable protocol engine now accepts CSV reconciliation data, technical
+FEC extracts, Excel workbooks and ERP snapshots paired with agent answers.
+It stores immutable source bytes, hashed plans and cumulative control results
+in a private SQLite database. Resuming a run preserves earlier results.
+
+The six-tool local MCP interface is documented in [MCP.md](MCP.md), including
+installation, input contracts, trusted ERP capture and deployment boundaries.
+An agent's own source declaration cannot establish ERP provenance. The trusted
+connector adapter captures the raw response before the agent uses it.
+
+```python
+from pathlib import Path
+from holco_finance_controls.engine import Engine
+
+engine = Engine(Path("/tmp/synthetic-holco-controls.db"))
+try:
+    source = engine.register(b"id,expected,observed\na,100,101\n")
+    plan = engine.plan([source["source_id"]], "reconciliation_csv")
+    run = engine.start(plan["plan_id"], plan["plan_sha256"])
+    report = engine.advance(run["run_id"], max_controls=2)
+    assert report["deterministic_outcome"] == "FAIL"
+finally:
+    engine.close()
+```
+
+The engine provides technical controls and trusted local review recording.
+An independent professional or adversarial assessment is still a distinct
+step: repeating the same code only establishes repeatability. No production
+console or remote HOLCO MCP service is changed by installing this package.
+
 ## Control flow
 
 ```mermaid
@@ -43,11 +75,13 @@ tolerances. The runner controls:
 - escalation when the decision is materially ambiguous.
 - required and forbidden tool use in an agent trajectory.
 
-The aggregate outcome has three states:
+The control outcome distinguishes:
 
 - `PASS`: all blocking controls pass;
 - `REVIEW`: no blocking failure, but human judgement is required;
 - `FAIL`: at least one blocking control failed.
+- `INCONCLUSIVE`: evidence or an executable method is missing;
+- `NOT_RUN`: a planned control did not execute.
 
 ## Run locally
 
@@ -77,6 +111,10 @@ Resume with `--resume-from INDEX --checkpoint-sha256 HASH`. The hash must match
 the exact dataset bytes, preventing a checkpoint from being applied to another
 version. An interrupted run is incomplete and exits non-zero; cases not
 executed are counted as `NOT_RUN`, never as passes.
+
+The Golden Set CLI is stateless: resuming recomputes the earlier prefix to
+retain its outcomes. Use the persistent engine/MCP for checkpointed file and
+ERP workflows without recomputing prior controls.
 
 ## Control protocol
 

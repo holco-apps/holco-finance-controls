@@ -1,6 +1,6 @@
 # HOLCO Financial Control Protocol
 
-Version 1.0
+Version 1.1 (implementation 0.3.0)
 
 > Deterministic when possible. AI when necessary. Human when accountable.
 
@@ -327,7 +327,17 @@ An implementation conforms to this protocol only if automated tests prove that:
 - counts reconcile to the declared control population;
 - correction runs preserve a link to the superseded run.
 
-The current reference implementation covers the deterministic result core,
-source hashing, bounded execution and checkpoints. The remaining acceptance
-tests are the public implementation roadmap; they are not presented as already
-implemented capabilities.
+The 0.3 implementation adds persistent sources, hashed plans, bounded runs,
+durable cumulative results, correction links, local review recording and six
+stdio MCP tools. File packs cover CSV reconciliation, a technical FEC subset,
+raw Excel inspection and snapshot comparison. An ERP/agent pack controls
+trusted connector capture, pagination, referenced sums and tool-use policy.
+See [MCP.md](MCP.md) for exact contracts and limits.
+
+This is not a claim of complete conformance to every gate above. A repeated
+deterministic run proves repeatability; independent adversarial expertise,
+authenticated human identity, automatic claim extraction, accounting rule
+coverage, authoritative spreadsheet recalculation and multi-tenant remote
+deployment require separately implemented and validated integrations.
+`Engine.sign_off` is a trusted local operator API, not an MCP capability.
+No LLM judgement service is called by the engine.

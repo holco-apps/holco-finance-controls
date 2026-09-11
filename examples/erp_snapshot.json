@@ -1,0 +1,9 @@
+{
+  "provenance": {"connector": "synthetic-erp", "request_id": "demo-request", "captured_at": "2026-09-11T12:00:00Z"},
+  "coverage": {"complete": true, "next_cursor": null, "expected_records": 2},
+  "records": [
+    {"id": "invoice-1", "amount": "100.00", "currency": "EUR", "period": "2026-09"},
+    {"id": "invoice-2", "amount": "200.00", "currency": "EUR", "period": "2026-09"}
+  ],
+  "tool_calls": [{"name": "list_invoices", "operation": "read", "status": "success"}]
+}

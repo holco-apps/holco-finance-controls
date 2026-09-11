@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "holco-finance-controls"
-version = "0.2.0"
+version = "0.3.0"
 description = "Reproducible, evidence-bound controls for financial AI agents"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,6 +20,10 @@ classifiers = [
 
 [project.scripts]
 holco-finance-controls = "holco_finance_controls.cli:main"
+holco-controls-mcp = "holco_finance_controls.server:main"
+
+[project.optional-dependencies]
+mcp = ["mcp>=2,<3"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -103,6 +103,8 @@ def load_dataset(path: Path) -> Dataset:
     else:
         raise ValueError("dataset must be a case list or an object containing a cases list")
     cases = tuple(Case.from_dict(value) for value in raw_cases)
+    if not cases:
+        raise ValueError("dataset must contain at least one case")
     case_ids = [case.case_id for case in cases]
     if len(case_ids) != len(set(case_ids)):
         raise ValueError("case_id values must be unique")
@@ -121,8 +123,12 @@ def run_dataset(path: Path, *, start_at: int = 0, max_cases: int | None = None, 
         raise ValueError("start_at must identify a position inside the dataset")
     if start_at and expected_source_hash != dataset.source_hash:
         raise ValueError("resume requires the matching dataset SHA-256 checkpoint")
+    if max_cases is not None and max_cases < 0:
+        raise ValueError("max_cases must be nonnegative")
     end = len(dataset.cases) if max_cases is None else min(len(dataset.cases), start_at + max(0, max_cases))
-    results = tuple(control_case(case) for case in dataset.cases[start_at:end])
+    # This legacy CLI is stateless: reproduce the prefix, never claim unverified
+    # prior outcomes. The persistent Engine resumes without recomputing it.
+    results = tuple(control_case(case) for case in dataset.cases[:end])
     complete = end >= len(dataset.cases)
     reason = "complete" if complete else stop_reason or "case_budget_reached"
     return SuiteReport(dataset.name, dataset.schema_version, dataset.source_hash, results, len(dataset.cases), end, reason, start_at, tuple(case.case_id for case in dataset.cases[:end]))
