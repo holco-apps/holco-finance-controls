@@ -24,6 +24,9 @@ class Case:
     rule: str
     requires_human_approval: bool
     agent_requested_review: bool
+    expected_tools: tuple[str, ...] = ()
+    called_tools: tuple[str, ...] = ()
+    forbidden_tools: tuple[str, ...] = ()
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "Case":
@@ -37,6 +40,9 @@ class Case:
             rule=str(value.get("rule", "none")),
             requires_human_approval=bool(value.get("requires_human_approval", False)),
             agent_requested_review=bool(value.get("agent_requested_review", False)),
+            expected_tools=tuple(map(str, value.get("expected_tools", []))),
+            called_tools=tuple(map(str, value.get("called_tools", []))),
+            forbidden_tools=tuple(map(str, value.get("forbidden_tools", []))),
         )
 
 
@@ -46,6 +52,7 @@ class Check:
     passed: bool
     blocking: bool
     detail: str
+    score: float
 
 
 @dataclass(frozen=True)
@@ -64,6 +71,7 @@ class Evaluation:
                     "passed": check.passed,
                     "blocking": check.blocking,
                     "detail": check.detail,
+                    "score": check.score,
                 }
                 for check in self.checks
             ],

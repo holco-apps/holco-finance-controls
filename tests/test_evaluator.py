@@ -47,6 +47,11 @@ class EvaluatorTests(unittest.TestCase):
         )
         self.assertFalse(escalation.passed)
 
+    def test_forbidden_tool_fails(self) -> None:
+        result = evaluate_case(make_case(forbidden_tools=("pay",), called_tools=("pay",)))
+        self.assertEqual(result.outcome, Outcome.FAIL)
+        self.assertEqual(next(check for check in result.checks if check.name == "tool_policy").score, 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()

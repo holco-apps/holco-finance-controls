@@ -21,8 +21,16 @@ flowchart LR
   F --> G[Regression suite]
 ```
 
-The included reference implementation covers the deterministic core. An AI
-evaluator may add context, but it cannot silently override a failed control.
+The included reference implementation covers the deterministic core through
+small, composable metric objects. An AI evaluator may add context, but it
+cannot silently override a failed control.
+
+```python
+from holco_finance_evals import AmountAccuracy, EvidenceCoverage, evaluate_case
+
+result = evaluate_case(case, metrics=[AmountAccuracy(), EvidenceCoverage()])
+assert result.outcome.value == "PASS"
+```
 
 ## What is evaluated
 
@@ -33,6 +41,7 @@ tolerances. The runner evaluates:
 - source identifiers and evidence coverage;
 - business-rule compliance;
 - escalation when the decision is materially ambiguous.
+- required and forbidden tool use in an agent trajectory.
 
 The aggregate outcome has three states:
 
@@ -46,6 +55,7 @@ Python 3.11+ is sufficient; the package has no runtime dependency.
 
 ```bash
 python -m holco_finance_evals examples/golden_set.json
+python -m holco_finance_evals examples/golden_set.json --format summary
 python -m unittest discover -s tests -v
 ```
 
@@ -56,8 +66,17 @@ python -m pip install -e .
 holco-finance-evals examples/golden_set.json
 ```
 
-The command emits JSON Lines so results can be archived and compared in CI.
-It exits with code `1` when any case fails.
+The command emits JSON Lines plus an aggregate summary so results can be
+archived and compared in CI. It exits with code `1` when any case fails; use
+`--fail-on-review` for a stricter release gate.
+
+## Why this is not a general-purpose LLM judge
+
+General evaluation frameworks are useful for relevancy, style and qualitative
+judgement. HOLCO Finance Evals starts elsewhere: amounts, source coverage,
+forbidden actions and approval boundaries are executable invariants. These
+checks are local, deterministic and model-independent. Probabilistic metrics
+can be added later as explicitly labelled, calibrated evidence.
 
 ## Golden Set
 
