@@ -118,6 +118,8 @@ does not add tools to HOLCO's deployed MCP.
 ## File packs
 
 - `excel_snapshot`: client-observed JSON, not a reconstructed XLSX. Contract below.
+- `excel_reconciliation`: two observed snapshots with explicit cross-sheet mappings;
+  compare amounts without rounding. Mapping suitability and provenance stay REVIEW.
 
 - `reconciliation_csv`: UTF-8 CSV, columns `id,expected,observed`, decimal amounts.
 - `fec_tsv`: technical subset using `JournalCode,EcritureNum,EcritureDate,Debit,Credit`;
@@ -174,6 +176,28 @@ and full-workbook coverage, recalculation and dependencies remain excluded.
 
 Snapshot reports may include sheet names, cell addresses and amounts in equation
 evidence. They remain private financial data and must not be published by default.
+
+### Cross-sheet reconciliation
+
+Register two snapshots using the same observation contract. In the **first**
+snapshot, add `comparisons: [{"id":"monthly_total","left":"G5","right":"B5"}]`.
+The addresses point to the first and second sources respectively; supply their
+source IDs in that order when planning `excel_reconciliation`. The plan includes
+the source-bound mappings and both scopes. At most 500 mappings are supported.
+Do not assume row positions match: confirm labels, entity, period, currency and
+stored units before proposing the plan. Supply objective, period, scope and the
+approved absolute tolerance. Never compare a cell against itself as evidence.
+
+The engine executes `comparison_scope` (REVIEW) and `mapped_amounts`: numeric
+observations are compared using decimal arithmetic. A difference above tolerance
+fails; absent mappings, missing cells, missing error-type observations and
+nonnumeric/error values are INCONCLUSIVE. Zero difference does not attest the
+ERP source or the completeness of accounting postings. Equations within each
+sheet remain a separate `excel_snapshot` plan. No formula is executed.
+
+Report one short business summary by default. Keep cell-level observations,
+hashes and call traces in the detailed report, not in every conversation step.
+Rules loaded without execution must not inflate the executed-control count.
 
 Reports omit raw rows, workbook names, cell values and source URLs by default;
 they return counts, deltas and opaque evidence references. They can still be

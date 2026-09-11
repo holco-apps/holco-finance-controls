@@ -37,6 +37,8 @@ finally:
 ```
 
 The engine provides technical controls and trusted local review recording.
+`excel_reconciliation` adds explicit amount comparisons between two observed
+worksheets, with missing evidence kept inconclusive and no implicit rounding.
 An independent professional or adversarial assessment is still a distinct
 step: repeating the same code only establishes repeatability. No production
 console or remote HOLCO MCP service is changed by installing this package.

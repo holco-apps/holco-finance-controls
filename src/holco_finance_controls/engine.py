@@ -112,8 +112,10 @@ class Engine:
     def plan(self, source_ids: list[str], pack: str, tolerance="0.01", supersedes=None, policy=None):
         if pack not in CATALOG:
             raise ValueError("unknown control pack")
-        if len(source_ids) != (2 if pack in {"workbook_comparison", "erp_agent_response"} else 1):
+        if len(source_ids) != (2 if pack in {"workbook_comparison", "erp_agent_response", "excel_reconciliation"} else 1):
             raise ValueError("wrong number of sources for pack")
+        if pack == "excel_reconciliation" and len(set(source_ids)) != 2:
+            raise ValueError("reconciliation requires distinct sources")
         tol = number(tolerance)
         if tol < 0:
             raise ValueError("tolerance must be nonnegative")
@@ -130,7 +132,7 @@ class Engine:
         if supersedes:
             self.get(supersedes)
         snapshot = None
-        if pack == "excel_snapshot":
+        if pack in {"excel_snapshot", "excel_reconciliation"}:
             from .excel_snapshot import parse_snapshot
             snapshot, _ = parse_snapshot(self._source(source_ids[0])[1])
             if any(not policy.get(k) for k in ("objective", "required_period", "required_scope")):
@@ -144,6 +146,12 @@ class Engine:
             body["snapshot_scope"] = {k: snapshot[k] for k in ("sheet", "scope", "captured_at")}
             body["declared_equations"] = snapshot.get("checks", [])
             body["exclusions"] += ["full workbook coverage", "formula recalculation", "external dependencies", "automatic formula correction"]
+        if pack == "excel_reconciliation":
+            from .excel_snapshot import parse_reconciliation
+            left, _, right, _, comparisons = parse_reconciliation([self._source(s)[1] for s in source_ids])
+            body["comparison_scopes"] = [{k: s[k] for k in ("sheet", "scope", "captured_at")} for s in (left, right)]
+            body["declared_comparisons"] = comparisons
+            body.pop("declared_equations", None)
         sha = digest(canonical(body).encode())
         pid = "plan_" + uuid.uuid4().hex
         self.db.execute("INSERT INTO plans VALUES (?,?,?)", (pid, sha, canonical(body)))

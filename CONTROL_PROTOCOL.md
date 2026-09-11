@@ -1,6 +1,6 @@
 # HOLCO Financial Control Protocol
 
-Version 1.1 (implementation 0.3.0)
+Version 1.2 (implementation 0.3.0, additive cross-sheet pack)
 
 > Deterministic when possible. AI when necessary. Human when accountable.
 
@@ -297,6 +297,25 @@ Every report contains:
 The executive summary states the worst material result first. A visual report
 may improve navigation, but colour is never the only carrier of status and the
 underlying machine-readable results remain authoritative.
+
+### Operational application to an agent-produced P&L
+
+Read exact numeric observations rather than formatted text. Preserve decimal
+precision from source through spreadsheet writing; round only the display.
+Propose arithmetic checks and an explicit monthly-to-cumulative mapping before
+execution. A cross-output discrepancy is an observation, not proof of its cause:
+do not dismiss it as rounding without reconciling the unrounded sources.
+
+Reuse confirmed request parameters. Ask only for missing choices that affect
+scope or interpretation. Keep a short approval step before starting; a scope
+change creates another plan and approval. A response summary gives the outcome,
+grouped anomalies, coverage and next action; evidence details are available on
+request. Do not narrate each internal call or copy every formula into the chat.
+
+A loaded business rule is neither an executed test nor a pass. Keep applicable
+rules that need documents or human judgement in a separate follow-up inventory.
+The implemented cross-sheet pack is described in MCP.md; no generic semantic
+understanding, legal review or automatic financial-model certification is claimed.
 
 ## 10. Corrections and remediation
 

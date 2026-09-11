@@ -50,6 +50,60 @@ def parse_snapshot(raw):
     return data, cells
 
 
+def parse_reconciliation(sources):
+    """Explicit mapping, not matching rows by position or model inference."""
+    if len(sources) != 2:
+        raise ValueError("reconciliation requires two snapshots")
+    left, lc = parse_snapshot(sources[0])
+    right, rc = parse_snapshot(sources[1])
+    comparisons = left.get("comparisons", [])
+    if not isinstance(comparisons, list) or len(comparisons) > 500:
+        raise ValueError("comparison limit")
+    ids = set()
+    for item in comparisons:
+        if not isinstance(item, dict) or set(item) != {"id", "left", "right"}:
+            raise ValueError("invalid comparison")
+        cid = item.get("id")
+        if not isinstance(cid, str) or not 0 < len(cid) <= 100 or cid in ids:
+            raise ValueError("invalid or duplicate comparison id")
+        ids.add(cid)
+        if any(not ADDRESS.fullmatch(str(item.get(k, ""))) for k in ("left", "right")):
+            raise ValueError("invalid comparison address")
+        if left["workbook"] == right["workbook"] and left["sheet"] == right["sheet"] and item["left"] == item["right"]:
+            raise ValueError("self comparison is not independent evidence")
+    return left, lc, right, rc, comparisons
+
+
+def reconciliation_control(code, sources, tolerance):
+    from .packs import number, result
+    left, lc, right, rc, comparisons = parse_reconciliation(sources)
+    if code == "comparison_scope":
+        return result(code, dict(mapped_pairs=len(comparisons),
+                                 scopes=[{k: s[k] for k in ("sheet", "scope", "captured_at")} for s in (left, right)]),
+                      "only explicitly mapped observations; entity, period, currency and mapping suitability require review", "REVIEW")
+    if code != "mapped_amounts":
+        raise ValueError("unknown reconciliation control")
+    findings = []
+    for item in comparisons:
+        try:
+            values = []
+            for cells, key in ((lc, "left"), (rc, "right")):
+                cell = cells[item[key]]
+                if "error" not in cell or cell["error"] is not None or type(cell["value"]) not in (int, float):
+                    raise ValueError("missing numeric observation")
+                values.append(number(str(cell["value"])))
+            with localcontext() as ctx:
+                ctx.prec = 160
+                delta = values[0] - values[1]
+            findings.append(dict(**item, observed=str(values[0]), expected=str(values[1]), delta=str(delta),
+                                 status="FAIL" if abs(delta) > tolerance else "PASS"))
+        except (KeyError, ValueError):
+            findings.append(dict(**item, status="INCONCLUSIVE", reason="missing, nonnumeric or untyped observation"))
+    statuses = [f["status"] for f in findings]
+    status = "FAIL" if "FAIL" in statuses else "INCONCLUSIVE" if not statuses or "INCONCLUSIVE" in statuses else "PASS"
+    return result(code, dict(checks=findings), "mapped amounts agree within approved tolerance; differences are not automatically rounding", status)
+
+
 def snapshot_control(code, raw, tolerance):
     from .packs import number, result
     data, cells = parse_snapshot(raw)
