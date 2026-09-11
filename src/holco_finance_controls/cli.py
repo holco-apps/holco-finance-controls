@@ -32,10 +32,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.format == "summary":
         print(json.dumps(report.summary(), indent=2, sort_keys=True))
     else:
-        for result in report.evaluations:
+        for result in report.results:
             print(json.dumps(result.as_dict(), sort_keys=True))
         print(json.dumps({"summary": report.summary()}, sort_keys=True))
-    failed = any(result.outcome is Outcome.FAIL for result in report.evaluations)
-    review_blocked = args.fail_on_review and any(result.outcome is Outcome.REVIEW for result in report.evaluations)
+    failed = any(result.outcome is Outcome.FAIL for result in report.results)
+    review_blocked = args.fail_on_review and any(result.outcome is Outcome.REVIEW for result in report.results)
     incomplete = not report.complete
     return 1 if failed or review_blocked or incomplete else 0

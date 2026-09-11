@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from holco_finance_evals import plan_dataset, run_dataset
+from holco_finance_controls import plan_dataset, run_dataset
 
 
 class SuiteTests(unittest.TestCase):

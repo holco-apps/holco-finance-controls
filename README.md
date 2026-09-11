@@ -1,7 +1,7 @@
-# HOLCO Finance Evals
+# HOLCO Finance Controls
 
-A small, reproducible benchmark for testing whether financial AI agents follow
-the numbers, sources and business rules — not just whether they sound right.
+A small, reproducible control framework for verifying that financial AI agents
+follow the numbers, sources and business rules — not just that they sound right.
 
 > Deterministic when possible. AI when necessary. Human when accountable.
 
@@ -9,33 +9,33 @@ This public repository is a deliberately isolated technical exhibit. It uses
 only synthetic data and contains no HOLCO production code, credentials, client
 names or internal endpoints.
 
-## Evaluation flow
+## Control flow
 
 ```mermaid
 flowchart LR
   A[Financial workflow] --> B[Deterministic checks]
   B --> C[Source checks]
   C --> D[Business rules]
-  D --> E[AI evaluator]
+  D --> E[Labelled AI review]
   E --> F[Human review]
   F --> G[Regression suite]
 ```
 
 The included reference implementation covers the deterministic core through
-small, composable metric objects. An AI evaluator may add context, but it
+small, composable control objects. An AI review may add context, but it
 cannot silently override a failed control.
 
 ```python
-from holco_finance_evals import AmountAccuracy, EvidenceCoverage, evaluate_case
+from holco_finance_controls import AmountAccuracy, EvidenceCoverage, control_case
 
-result = evaluate_case(case, metrics=[AmountAccuracy(), EvidenceCoverage()])
+result = control_case(case, metrics=[AmountAccuracy(), EvidenceCoverage()])
 assert result.outcome.value == "PASS"
 ```
 
-## What is evaluated
+## What is controlled
 
 Each synthetic case contains source facts, an agent answer and explicit
-tolerances. The runner evaluates:
+tolerances. The runner controls:
 
 - numerical agreement with the source facts;
 - source identifiers and evidence coverage;
@@ -54,10 +54,10 @@ The aggregate outcome has three states:
 Python 3.11+ is sufficient; the package has no runtime dependency.
 
 ```bash
-python -m holco_finance_evals examples/golden_set.json
-python -m holco_finance_evals examples/golden_set.json --format summary
-python -m holco_finance_evals examples/golden_set.json --plan
-python -m holco_finance_evals examples/golden_set.json --max-cases 2
+python -m holco_finance_controls examples/golden_set.json
+python -m holco_finance_controls examples/golden_set.json --format summary
+python -m holco_finance_controls examples/golden_set.json --plan
+python -m holco_finance_controls examples/golden_set.json --max-cases 2
 python -m unittest discover -s tests -v
 ```
 
@@ -65,7 +65,7 @@ From a fresh clone, either install the package or expose `src`:
 
 ```bash
 python -m pip install -e .
-holco-finance-evals examples/golden_set.json
+holco-finance-controls examples/golden_set.json
 ```
 
 The command emits JSON Lines plus an aggregate summary so results can be
@@ -78,7 +78,12 @@ the exact dataset bytes, preventing a checkpoint from being applied to another
 version. An interrupted run is incomplete and exits non-zero; cases not
 executed are counted as `NOT_RUN`, never as passes.
 
-## Control contract
+## Control protocol
+
+The normative workflow is documented in
+[`CONTROL_PROTOCOL.md`](CONTROL_PROTOCOL.md). It formalises intake, planning,
+deterministic execution, separately labelled probabilistic review, accountable
+human decision and proof-bearing closure.
 
 - A plan declares metrics and accountable cases before execution.
 - Each report is bound to the exact dataset bytes with SHA-256.
@@ -90,8 +95,8 @@ executed are counted as `NOT_RUN`, never as passes.
 
 ## Why this is not a general-purpose LLM judge
 
-General evaluation frameworks are useful for relevancy, style and qualitative
-judgement. HOLCO Finance Evals starts elsewhere: amounts, source coverage,
+General LLM quality frameworks are useful for relevancy, style and qualitative
+judgement. HOLCO Finance Controls starts elsewhere: amounts, source coverage,
 forbidden actions and approval boundaries are executable invariants. These
 checks are local, deterministic and model-independent. Probabilistic metrics
 can be added later as explicitly labelled, calibrated evidence.
@@ -112,7 +117,7 @@ customer data without a documented legal basis and publication review.
 
 ## Design boundaries
 
-- Evaluation is separate from generation.
+- Control is separate from generation.
 - Deterministic controls run before probabilistic judgement.
 - Evidence is identified by stable source IDs, not prose alone.
 - A reviewer is required for decisions marked accountable.

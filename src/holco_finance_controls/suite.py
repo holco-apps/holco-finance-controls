@@ -8,11 +8,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .evaluator import evaluate_case
+from .controls import control_case
 from .metrics import DEFAULT_METRICS
-from .models import Case, Evaluation, Outcome
+from .models import Case, ControlResult, Outcome
 
-REPORT_SCHEMA = "holco.finance-eval-run/v1"
+REPORT_SCHEMA = "holco.finance-control-run/v1"
 
 
 @dataclass(frozen=True)
@@ -44,7 +44,7 @@ class ControlPlan:
                 for metric in DEFAULT_METRICS
             ],
             "human_decisions": list(self.human_decisions),
-            "boundary": "Deterministic failures cannot be overridden by a probabilistic evaluator.",
+            "boundary": "Deterministic failures cannot be overridden by a probabilistic review.",
         }
 
 
@@ -53,7 +53,7 @@ class SuiteReport:
     dataset: str
     schema_version: str
     source_hash: str
-    evaluations: tuple[Evaluation, ...]
+    results: tuple[ControlResult, ...]
     planned_cases: int
     next_case_index: int
     stop_reason: str
@@ -73,17 +73,17 @@ class SuiteReport:
 
     def summary(self) -> dict[str, Any]:
         counts = {outcome.value: 0 for outcome in Outcome}
-        for evaluation in self.evaluations:
-            counts[evaluation.outcome.value] += 1
+        for result in self.results:
+            counts[result.outcome.value] += 1
         counts[Outcome.NOT_RUN.value] += self.planned_cases - self.next_case_index
-        scores = [check.score for result in self.evaluations for check in result.checks]
+        scores = [check.score for result in self.results for check in result.checks]
         return {
             "report_schema": REPORT_SCHEMA,
             "dataset": self.dataset,
             "schema_version": self.schema_version,
             "source_sha256": self.source_hash,
             "planned_cases": self.planned_cases,
-            "executed_cases": len(self.evaluations),
+            "executed_cases": len(self.results),
             "prior_cases_from_checkpoint": self.start_case_index,
             "complete": self.complete,
             "stop_reason": self.stop_reason,
@@ -122,7 +122,7 @@ def run_dataset(path: Path, *, start_at: int = 0, max_cases: int | None = None, 
     if start_at and expected_source_hash != dataset.source_hash:
         raise ValueError("resume requires the matching dataset SHA-256 checkpoint")
     end = len(dataset.cases) if max_cases is None else min(len(dataset.cases), start_at + max(0, max_cases))
-    evaluations = tuple(evaluate_case(case) for case in dataset.cases[start_at:end])
+    results = tuple(control_case(case) for case in dataset.cases[start_at:end])
     complete = end >= len(dataset.cases)
     reason = "complete" if complete else stop_reason or "case_budget_reached"
-    return SuiteReport(dataset.name, dataset.schema_version, dataset.source_hash, evaluations, len(dataset.cases), end, reason, start_at, tuple(case.case_id for case in dataset.cases[:end]))
+    return SuiteReport(dataset.name, dataset.schema_version, dataset.source_hash, results, len(dataset.cases), end, reason, start_at, tuple(case.case_id for case in dataset.cases[:end]))

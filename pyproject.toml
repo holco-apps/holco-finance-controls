@@ -3,14 +3,14 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "holco-finance-evals"
-version = "0.1.0"
-description = "Reproducible, source-aware evaluations for financial AI agents"
+name = "holco-finance-controls"
+version = "0.2.0"
+description = "Reproducible, evidence-bound controls for financial AI agents"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "HOLCO" }]
-keywords = ["ai", "evals", "finance", "agents", "governance"]
+keywords = ["ai", "controls", "finance", "agents", "governance"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "License :: OSI Approved :: MIT License",
@@ -19,7 +19,7 @@ classifiers = [
 ]
 
 [project.scripts]
-holco-finance-evals = "holco_finance_evals.cli:main"
+holco-finance-controls = "holco_finance_controls.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -1,4 +1,4 @@
-"""Typed domain objects for the benchmark."""
+"""Typed domain objects for the control framework."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ class Outcome(StrEnum):
     PASS = "PASS"
     REVIEW = "REVIEW"
     FAIL = "FAIL"
+    INCONCLUSIVE = "INCONCLUSIVE"
     NOT_RUN = "NOT_RUN"
 
 
@@ -64,7 +65,7 @@ class Check:
 
 
 @dataclass(frozen=True)
-class Evaluation:
+class ControlResult:
     case_id: str
     outcome: Outcome
     checks: tuple[Check, ...]
