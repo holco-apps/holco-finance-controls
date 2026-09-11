@@ -15,6 +15,7 @@ MAX_BYTES = 10 * 1024 * 1024
 MAX_CELLS = 500_000
 VERSION = "0.3.0"
 CATALOG = {
+    "excel_snapshot": ["snapshot_scope", "cell_errors", "formula_references", "declared_equations"],
     "reconciliation_csv": ["population", "amounts"],
     "fec_tsv": ["population", "dates", "amounts", "entry_balance", "duplicates"],
     "workbook_xlsx": ["population", "stored_errors", "broken_references", "formula_caches"],
@@ -121,6 +122,9 @@ def exact_money(method):
 def execute(pack: str, code: str, sources: list[bytes], tolerance: str, policy=None):
     tol = number(tolerance)
     try:
+        if pack == "excel_snapshot":
+            from .excel_snapshot import snapshot_control
+            return snapshot_control(code, sources[0], tol)
         if pack == "erp_agent_response":
             return erp_control(code, sources, tol, policy or {})
         if pack.startswith("workbook"):

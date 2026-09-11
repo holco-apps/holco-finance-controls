@@ -18,6 +18,7 @@ def build_server(engine):
         """Describe supported control packs, input contracts and limits."""
         return dict(version=VERSION, packs=CATALOG, max_input_bytes=MAX_BYTES,
                     formats={"reconciliation_csv": "UTF-8 CSV: id,expected,observed",
+                             "excel_snapshot": "JSON observed sheet: workbook,sheet,scope,captured_at,cells[{address,value,formula,error}],checks[{id,target,terms[{address,coefficient}]}]. Plan policy objective,required_period,required_scope required. See MCP.md.",
                              "fec_tsv": "UTF-8 TSV: JournalCode,EcritureNum,EcritureDate,Debit,Credit",
                              "workbook_xlsx": "base64 OOXML XLSX; cached values, no formula execution",
                              "workbook_comparison": "two XLSX snapshots; tolerance in stored units",

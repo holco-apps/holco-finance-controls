@@ -118,9 +118,9 @@ class Engine:
         if tol < 0:
             raise ValueError("tolerance must be nonnegative")
         policy = policy or {}
-        if set(policy) - {"allowed_tools", "required_tools", "required_period", "required_currency", "required_scope"}:
+        if set(policy) - {"objective", "allowed_tools", "required_tools", "required_period", "required_currency", "required_scope"}:
             raise ValueError("unsupported policy fields")
-        for key in ("required_period", "required_currency", "required_scope"):
+        for key in ("objective", "required_period", "required_currency", "required_scope"):
             if key in policy and (not isinstance(policy[key], str) or not 1 <= len(policy[key]) <= 100):
                 raise ValueError("request criteria must be bounded nonempty strings")
         for key in ("allowed_tools", "required_tools"):
@@ -129,11 +129,21 @@ class Engine:
                 raise ValueError("tool policy must contain bounded lists of tool names")
         if supersedes:
             self.get(supersedes)
+        snapshot = None
+        if pack == "excel_snapshot":
+            from .excel_snapshot import parse_snapshot
+            snapshot, _ = parse_snapshot(self._source(source_ids[0])[1])
+            if any(not policy.get(k) for k in ("objective", "required_period", "required_scope")):
+                raise ValueError("snapshot requires objective, period and scope before planning")
         body = dict(protocol_version=VERSION, pack=pack, tolerance=str(tol), policy=policy,
                     sources=[dict(source_id=s, sha256=self._source(s)[0]) for s in source_ids],
                     controls=list(CATALOG[pack]), created_at=now(), supersedes=supersedes,
                     exclusions=["external source authenticity", "business plausibility", "legal compliance"],
                     required_review="trusted operator sign-off; not provided by MCP")
+        if snapshot is not None:
+            body["snapshot_scope"] = {k: snapshot[k] for k in ("sheet", "scope", "captured_at")}
+            body["declared_equations"] = snapshot.get("checks", [])
+            body["exclusions"] += ["full workbook coverage", "formula recalculation", "external dependencies", "automatic formula correction"]
         sha = digest(canonical(body).encode())
         pid = "plan_" + uuid.uuid4().hex
         self.db.execute("INSERT INTO plans VALUES (?,?,?)", (pid, sha, canonical(body)))

@@ -117,6 +117,8 @@ does not add tools to HOLCO's deployed MCP.
 
 ## File packs
 
+- `excel_snapshot`: client-observed JSON, not a reconstructed XLSX. Contract below.
+
 - `reconciliation_csv`: UTF-8 CSV, columns `id,expected,observed`, decimal amounts.
 - `fec_tsv`: technical subset using `JournalCode,EcritureNum,EcritureDate,Debit,Credit`;
   dates, decimal amounts, entry balance and duplicates. Not the full statutory FEC specification.
@@ -134,6 +136,44 @@ LibreOffice on production files. Recalculation must happen on a sandboxed copy
 with a separately recorded engine version.
 
 ## Publishing and report handling
+
+### Excel client snapshots
+
+When a spreadsheet client cannot export XLSX bytes, register this JSON as UTF-8:
+
+```json
+{
+  "workbook": "synthetic.xlsx", "sheet": "Cash", "scope": "A1:C1",
+  "captured_at": "2026-01-01T00:00:00Z",
+  "cells": [
+    {"address": "A1", "value": 100, "formula": null, "error": null},
+    {"address": "B1", "value": 20, "formula": null, "error": null},
+    {"address": "C1", "value": 120, "formula": "=A1+B1", "error": null}
+  ],
+  "checks": [{"id": "rollforward", "target": "C1", "terms": [
+    {"address": "A1", "coefficient": "1"}, {"address": "B1", "coefficient": "1"}
+  ]}]
+}
+```
+
+Only copy actual tool observations. Missing formula/error views must be omitted,
+not invented as null. Null means observed absence; a typed error is distinct from
+a literal string such as `#REF!`. One sheet per snapshot, up to 10,000 unique
+cells and 500 proposed linear equations. Values used in equations must be JSON
+numbers; coefficient strings express signs and weights. Missing operands are
+INCONCLUSIVE. No formula, macro, external link or code is executed.
+
+Ask for missing objective, period, scope and tolerance before planning. Supply
+policy `objective`, `required_period`, `required_scope`; show the returned plan,
+including its source-bound equations and exclusions, before requesting approval.
+Equations are proposals whose suitability needs human review, not trusted agent
+answers. The engine recomputes their expected amounts from observed source cells.
+Broken references and typed errors fail; constants alone do not fail. Scope is
+always REVIEW because only submitted cells are covered, provenance is unattested,
+and full-workbook coverage, recalculation and dependencies remain excluded.
+
+Snapshot reports may include sheet names, cell addresses and amounts in equation
+evidence. They remain private financial data and must not be published by default.
 
 Reports omit raw rows, workbook names, cell values and source URLs by default;
 they return counts, deltas and opaque evidence references. They can still be
