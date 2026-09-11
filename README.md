@@ -56,6 +56,8 @@ Python 3.11+ is sufficient; the package has no runtime dependency.
 ```bash
 python -m holco_finance_evals examples/golden_set.json
 python -m holco_finance_evals examples/golden_set.json --format summary
+python -m holco_finance_evals examples/golden_set.json --plan
+python -m holco_finance_evals examples/golden_set.json --max-cases 2
 python -m unittest discover -s tests -v
 ```
 
@@ -69,6 +71,22 @@ holco-finance-evals examples/golden_set.json
 The command emits JSON Lines plus an aggregate summary so results can be
 archived and compared in CI. It exits with code `1` when any case fails; use
 `--fail-on-review` for a stricter release gate.
+
+Bounded runs emit a checkpoint containing the dataset hash and next case index.
+Resume with `--resume-from INDEX --checkpoint-sha256 HASH`. The hash must match
+the exact dataset bytes, preventing a checkpoint from being applied to another
+version. An interrupted run is incomplete and exits non-zero; cases not
+executed are counted as `NOT_RUN`, never as passes.
+
+## Control contract
+
+- A plan declares metrics and accountable cases before execution.
+- Each report is bound to the exact dataset bytes with SHA-256.
+- Evidence links stable source IDs to optional source hashes without embedding
+  customer content.
+- Deterministic blocking failures cannot be overridden by an AI judge.
+- `deterministic_outcome` is distinct from the global review decision.
+- Checkpoints preserve partial work after a quota, timeout or manual pause.
 
 ## Why this is not a general-purpose LLM judge
 

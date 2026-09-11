@@ -3,10 +3,10 @@
 from .evaluator import evaluate_case
 from .metrics import AccountableDecision, AmountAccuracy, EvidenceCoverage, ToolPolicy
 from .models import Case, Evaluation, Outcome
-from .suite import SuiteReport, run_dataset
+from .suite import ControlPlan, SuiteReport, plan_dataset, run_dataset
 
 __all__ = [
     "AccountableDecision", "AmountAccuracy", "Case", "Evaluation",
-    "EvidenceCoverage", "Outcome", "SuiteReport", "ToolPolicy",
-    "evaluate_case", "run_dataset",
+    "ControlPlan", "EvidenceCoverage", "Outcome", "SuiteReport", "ToolPolicy",
+    "evaluate_case", "plan_dataset", "run_dataset",
 ]

@@ -52,6 +52,16 @@ class EvaluatorTests(unittest.TestCase):
         self.assertEqual(result.outcome, Outcome.FAIL)
         self.assertEqual(next(check for check in result.checks if check.name == "tool_policy").score, 0.0)
 
+    def test_evidence_is_linked_without_source_content(self) -> None:
+        result = evaluate_case(make_case(evidence_hashes=(("ledger:1", "a" * 64),)))
+        evidence = result.checks[0].evidence[0]
+        self.assertEqual(evidence, {"source_id": "ledger:1", "sha256": "a" * 64})
+
+    def test_approved_human_escalation_remains_review(self) -> None:
+        result = evaluate_case(make_case(requires_human_approval=True, agent_requested_review=True))
+        self.assertEqual(result.deterministic_outcome, Outcome.PASS)
+        self.assertTrue(result.human_review_required)
+
 
 if __name__ == "__main__":
     unittest.main()

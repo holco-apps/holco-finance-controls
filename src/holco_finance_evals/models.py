@@ -11,6 +11,7 @@ class Outcome(StrEnum):
     PASS = "PASS"
     REVIEW = "REVIEW"
     FAIL = "FAIL"
+    NOT_RUN = "NOT_RUN"
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,7 @@ class Case:
     expected_tools: tuple[str, ...] = ()
     called_tools: tuple[str, ...] = ()
     forbidden_tools: tuple[str, ...] = ()
+    evidence_hashes: tuple[tuple[str, str], ...] = ()
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "Case":
@@ -43,16 +45,22 @@ class Case:
             expected_tools=tuple(map(str, value.get("expected_tools", []))),
             called_tools=tuple(map(str, value.get("called_tools", []))),
             forbidden_tools=tuple(map(str, value.get("forbidden_tools", []))),
+            evidence_hashes=tuple(sorted((str(key), str(item)) for key, item in value.get("evidence_hashes", {}).items())),
         )
 
 
 @dataclass(frozen=True)
 class Check:
     name: str
-    passed: bool
+    status: Outcome
     blocking: bool
     detail: str
     score: float
+    evidence: tuple[dict[str, str], ...] = ()
+
+    @property
+    def passed(self) -> bool:
+        return self.status is Outcome.PASS
 
 
 @dataclass(frozen=True)
@@ -60,6 +68,8 @@ class Evaluation:
     case_id: str
     outcome: Outcome
     checks: tuple[Check, ...]
+    deterministic_outcome: Outcome
+    human_review_required: bool
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -69,10 +79,14 @@ class Evaluation:
                 {
                     "name": check.name,
                     "passed": check.passed,
+                    "status": check.status.value,
                     "blocking": check.blocking,
                     "detail": check.detail,
                     "score": check.score,
+                    "evidence": list(check.evidence),
                 }
                 for check in self.checks
             ],
+            "deterministic_outcome": self.deterministic_outcome.value,
+            "human_review_required": self.human_review_required,
         }
