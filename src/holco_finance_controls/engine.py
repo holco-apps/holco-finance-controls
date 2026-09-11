@@ -47,9 +47,10 @@ class Engine:
     def __init__(self, database: Path):
         self.lock = RLock()
         self.database = Path(database)
-        self.database.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        if not self.database.exists():
-            self.database.touch(mode=0o600)
+        if str(database) != ":memory:":
+            self.database.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            if not self.database.exists():
+                self.database.touch(mode=0o600)
         self.db = sqlite3.connect(str(database), timeout=30, isolation_level=None, check_same_thread=False)
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.executescript("""
