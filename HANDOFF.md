@@ -6,8 +6,9 @@ Updated 2026-09-11. Release 0.3.0.
 
 - Persistent single-operator protocol engine with source and plan integrity checks,
   cumulative results, bounded control execution and resume after process restart.
-- Five packs: reconciliation CSV, technical FEC subset, raw XLSX inspection,
-  XLSX snapshot comparison, and ERP snapshot versus structured agent claims.
+- Seven packs: reconciliation CSV, technical FEC subset, raw XLSX inspection,
+  XLSX snapshot comparison, ERP snapshot versus structured agent claims,
+  observed Excel equations and explicitly mapped cross-sheet reconciliation.
 - Trusted adapter capture of raw ERP bytes, normalized records, pagination and
   tool trace. General MCP uploads cannot forge connector capture receipts.
 - Six stdio MCP tools and a real subprocess transport test, including restart.
@@ -51,5 +52,13 @@ claim from prose or verify the correctness of provider-specific normalization.
    remote deployment authorised or performed in this lot. Owner: to assign.
 
 Review these integration decisions on the next connector work session.
+Additive cross-sheet update, 2026-09-11: protocol document 1.2; engine contract
+version remains 0.3.0 so existing source-bound plans remain readable. Comparisons
+are bound to two immutable sources and exposed in the approved plan. Missing
+mapping, numeric data or error-type observations cannot pass. Same-cell comparisons
+are rejected. 51 Python tests pass; the stdio test is skipped in the deployment
+environment because the optional MCP SDK is absent. Remote integration and its
+HTTPS tests belong to the separately managed private gateway, not this repository.
+
 Rollback: revert the 0.3 change commit and use 0.2's Golden Set runner. Keep
 private 0.3 databases for evidence; 0.2 does not consume their protocol records.
