@@ -115,3 +115,11 @@ No deployment or semantic LLM evaluator. Next: independent expert calibration
 and additional layout fixtures; reviewer to assign at the next integration review.
 Rollback: revert the lot 3 commits together with the matching host integration;
 retain existing immutable private reports, and use compatible code to resume them.
+
+## Host integration release — 2026-09-12
+
+Lot 3 was subsequently installed in the authorized host release from `a07be04`.
+The installed package passed 74 tests, with one optional MCP SDK case skipped.
+The host's synthetic browser workflow passed using that installed engine.
+This changes deployment status only: expert calibration and professional review
+remain open; no assurance conclusion or semantic evaluator is implied.
