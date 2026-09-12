@@ -43,6 +43,21 @@ An independent professional or adversarial assessment is still a distinct
 step: repeating the same code only establishes repeatability. No production
 console or remote HOLCO MCP service is changed by installing this package.
 
+## Structured dossier review
+
+The additive `dossier_review` pack expects UTF-8 semicolon CSV with exact columns:
+`poste;periode;n_1;n;reporting;explication;montant_explique;piece`.
+Supply `policy={"required_period": "2025", "required_currency": "EUR"}` when
+planning. Five families cover declared period, reconciliations, variations,
+quantified explanations and review coverage. The approved plan records v1
+thresholds: 0.01 EUR reconciliation; variation at least 1,000 EUR and 20% (zero
+base: amount only). At most 2,000 unique rows are accepted.
+
+All compared values come from the supplied table. Document references are
+unverified declarations and never suffice for an automatic professional sign-off.
+Missing evidence is inconclusive; arithmetic contradictions fail; human review
+remains necessary even when the numerical checks pass.
+
 ## Control flow
 
 ```mermaid

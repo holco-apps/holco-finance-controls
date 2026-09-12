@@ -62,3 +62,20 @@ HTTPS tests belong to the separately managed private gateway, not this repositor
 
 Rollback: revert the 0.3 change commit and use 0.2's Golden Set runner. Keep
 private 0.3 databases for evidence; 0.2 does not consume their protocol records.
+
+## Additive dossier review pack — 2026-09-12
+
+`dossier_review` accepts a strict semicolon CSV of declared prior/current/reporting
+amounts and explanations. Five families check period, per-line and aggregate
+reconciliation, variations, explained amounts and review coverage. Fixed v1
+thresholds are bound into the approved plan. Missing values remain inconclusive;
+an explanation matching the arithmetic still requires human evidence review.
+The pack does not retrieve cited documents or compare an independent ERP source.
+No semantic LLM or professional assurance is implemented. Existing 0.3 contracts
+are retained. The surrounding private web integration is managed separately.
+
+Validation: 2026-09-12, unittest discovery: 59 pass, one optional stdio SDK test
+skipped. Eight new tests include compensating differences, zero bases, missing
+explanations, contradictory amounts, malformed/duplicate input and period scope.
+Next: authorized real-case calibration with a named reviewer (to assign), then
+measure family-specific false positives/negatives. No deployment in this lot.

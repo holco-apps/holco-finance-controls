@@ -131,6 +131,11 @@ class Engine:
                 raise ValueError("tool policy must contain bounded lists of tool names")
         if supersedes:
             self.get(supersedes)
+        if pack == "dossier_review":
+            from .dossier_review import read_review
+            read_review(self._source(source_ids[0])[1])
+            if not policy.get("required_period") or policy.get("required_currency") != "EUR":
+                raise ValueError("Review requires an explicit period and EUR currency")
         snapshot = None
         if pack in {"excel_snapshot", "excel_reconciliation"}:
             from .excel_snapshot import parse_snapshot
@@ -146,6 +151,10 @@ class Engine:
             body["snapshot_scope"] = {k: snapshot[k] for k in ("sheet", "scope", "captured_at")}
             body["declared_equations"] = snapshot.get("checks", [])
             body["exclusions"] += ["full workbook coverage", "formula recalculation", "external dependencies", "automatic formula correction"]
+        if pack == "dossier_review":
+            from .dossier_review import LIMITS
+            body["review_method"] = dict(version="holco.review-worksheet/1", **LIMITS,
+                                         evidence="declared references, human examination required")
         if pack == "excel_reconciliation":
             from .excel_snapshot import parse_reconciliation
             left, _, right, _, comparisons = parse_reconciliation([self._source(s)[1] for s in source_ids])
