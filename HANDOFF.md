@@ -1,6 +1,7 @@
 # Control engine handoff
 
-Updated 2026-09-11. Release 0.3.0.
+Updated 2026-09-12. Lot 3 host integration deployed; see the release entry below.
+The initial 0.3.0 scope and subsequent additions are recorded chronologically.
 
 ## Delivered
 
@@ -14,7 +15,7 @@ Updated 2026-09-11. Release 0.3.0.
 - Six stdio MCP tools and a real subprocess transport test, including restart.
 - Trusted local sign-off and superseding runs. No approval endpoint in MCP.
 
-No production console, deployed ERP connector or remote gateway changed.
+At the initial 0.3.0 milestone, no production console, deployed ERP connector or remote gateway changed.
 Real-source development checks remain outside Git; public tests are synthetic.
 
 ## Evidence and limits
