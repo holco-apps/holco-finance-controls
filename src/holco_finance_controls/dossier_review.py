@@ -10,6 +10,9 @@ LIMITS = {"variance_amount": "1000", "variance_percent": "20"}
 
 
 def read_review(raw):
+    if raw.startswith(b"PK"):
+        from .review_xlsx import read_xlsx_review
+        return read_xlsx_review(raw)[0]
     reader = csv.DictReader(io.StringIO(raw.decode("utf-8-sig")), delimiter=";")
     if reader.fieldnames != FIELDS:
         raise ValueError("Expected review template columns: " + ";".join(FIELDS))
@@ -43,7 +46,7 @@ def review_control(code, raw, tolerance, policy):
 
     def add(row, status, title, observed, expected):
         checks.append(dict(id=f"{code}:{row['line']}", status=status, title=title,
-                           location=f"ligne {row['line']} · {row['poste']}",
+                           location=(f"{row['sheet']}!A{row['line']}:H{row['line']} · {row['poste']}" if row.get("sheet") else f"ligne {row['line']} · {row['poste']}"),
                            observed=observed, expected=expected))
 
     for row in rows:

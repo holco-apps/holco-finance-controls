@@ -79,3 +79,17 @@ skipped. Eight new tests include compensating differences, zero bases, missing
 explanations, contradictory amounts, malformed/duplicate input and period scope.
 Next: authorized real-case calibration with a named reviewer (to assign), then
 measure family-specific false positives/negatives. No deployment in this lot.
+
+## Additive XLSX review intake — 2026-09-12, lot 2
+
+The new `dossier_review_xlsx` pack uses the same financial method with an explicit
+named-sheet contract and raw XLSX source evidence. No guessed column mapping,
+formula recalculation or semantic claim. A reproducible fictitious template is
+provided by `review_template`. Detailed scope and original locations are preserved;
+formulas with even apparently valid caches cannot become verified inputs.
+
+Validation: 66 discovered tests, 65 pass and one optional MCP SDK test skipped.
+Six new tests cover exact source/scope, formula caches, shared strings, hidden rows,
+missing values, invalid named tables and XML declarations. Independent openpyxl
+read/write of the template and reimport passed locally (not a runtime dependency).
+No actual Excel desktop session or real-client method calibration claimed.

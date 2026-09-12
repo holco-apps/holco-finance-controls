@@ -58,6 +58,21 @@ unverified declarations and never suffice for an automatic professional sign-off
 Missing evidence is inconclusive; arithmetic contradictions fail; human review
 remains necessary even when the numerical checks pass.
 
+The `dossier_review_xlsx` pack accepts the downloadable XLSX equivalent: one
+visible sheet named `Revue HOLCO`, with the exact eight French headers generated
+by the template below. The plan records its range, included row count and excluded
+sheets; findings retain original worksheet/row references and the XLSX hash.
+Hidden/filtered rows are included. Formulas, merged cells, error values and data
+outside A:H or beyond 2,000 rows are rejected; formulas must be pasted as values.
+Other worksheets are outside this financial review. A workbook without the named
+sheet can still use the existing technical workbook pack.
+
+Generate a reproducible fictitious template (with a separate instruction sheet):
+
+```bash
+python -m holco_finance_controls.review_template /tmp/review-template.xlsx
+```
+
 ## Control flow
 
 ```mermaid

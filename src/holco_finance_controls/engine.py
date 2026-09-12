@@ -131,9 +131,12 @@ class Engine:
                 raise ValueError("tool policy must contain bounded lists of tool names")
         if supersedes:
             self.get(supersedes)
-        if pack == "dossier_review":
+        if pack in {"dossier_review", "dossier_review_xlsx"}:
             from .dossier_review import read_review
-            read_review(self._source(source_ids[0])[1])
+            raw_review = self._source(source_ids[0])[1]
+            if pack == "dossier_review" and raw_review.startswith(b"PK"):
+                raise ValueError("Excel review requires the dossier_review_xlsx pack and its explicit worksheet scope")
+            read_review(raw_review)
             if not policy.get("required_period") or policy.get("required_currency") != "EUR":
                 raise ValueError("Review requires an explicit period and EUR currency")
         snapshot = None
@@ -151,7 +154,7 @@ class Engine:
             body["snapshot_scope"] = {k: snapshot[k] for k in ("sheet", "scope", "captured_at")}
             body["declared_equations"] = snapshot.get("checks", [])
             body["exclusions"] += ["full workbook coverage", "formula recalculation", "external dependencies", "automatic formula correction"]
-        if pack == "dossier_review":
+        if pack in {"dossier_review", "dossier_review_xlsx"}:
             from .dossier_review import LIMITS
             body["review_method"] = dict(version="holco.review-worksheet/1", **LIMITS,
                                          evidence="declared references, human examination required")
@@ -161,6 +164,10 @@ class Engine:
             body["comparison_scopes"] = [{k: s[k] for k in ("sheet", "scope", "captured_at")} for s in (left, right)]
             body["declared_comparisons"] = comparisons
             body.pop("declared_equations", None)
+        if pack == "dossier_review_xlsx":
+            from .review_xlsx import read_xlsx_review
+            _, body["review_scope"] = read_xlsx_review(self._source(source_ids[0])[1])
+            body["exclusions"] += ["other worksheets", "formula recalculation", "independent ERP reconciliation"]
         sha = digest(canonical(body).encode())
         pid = "plan_" + uuid.uuid4().hex
         self.db.execute("INSERT INTO plans VALUES (?,?,?)", (pid, sha, canonical(body)))
