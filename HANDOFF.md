@@ -93,3 +93,25 @@ Six new tests cover exact source/scope, formula caches, shared strings, hidden r
 missing values, invalid named tables and XML declarations. Independent openpyxl
 read/write of the template and reimport passed locally (not a runtime dependency).
 No actual Excel desktop session or real-client method calibration claimed.
+
+## Free financial workbook and context — 2026-09-12, lot 3
+
+New `financial_workbook` pack, described in README. Source and context hashes are
+bound to the plan. Deterministic label/header discovery provides an explicit
+mapping proposal; ambiguous mappings cannot start. Annual/monthly/cumulative
+scope, percent labels, missing cached values and shared SUM formulas have focused
+regression coverage. The host controls context access and stores current versions;
+this engine never reads a production console or customer identity.
+
+Validation: 75 unittest cases discovered, 74 passed, one optional MCP transport
+case skipped (SDK absent). Nine new cases cover the new pack, including small
+monetary defects, missing evidence, shared formulas, exact periods, ambiguity and
+immutable two-source execution. No customer data or local client paths in Git.
+
+Limits: known label vocabulary and signed P&L equations only; unknown layouts
+remain inconclusive. Unit analysis is restricted to simple vertical SUM ranges.
+Free-text rules require human evidence review; memory association is lexical.
+No deployment or semantic LLM evaluator. Next: independent expert calibration
+and additional layout fixtures; reviewer to assign at the next integration review.
+Rollback: revert the lot 3 commits together with the matching host integration;
+retain existing immutable private reports, and use compatible code to resume them.

@@ -15,6 +15,7 @@ MAX_BYTES = 10 * 1024 * 1024
 MAX_CELLS = 500_000
 VERSION = "0.3.0"
 CATALOG = {
+    "financial_workbook": ["workbook_scope", "workbook_errors", "formula_units", "financial_equations", "analytical_variances", "context_review"],
     "dossier_review_xlsx": ["source_scope", "reconciliations", "variations", "explanations", "review_coverage"],
     "dossier_review": ["source_scope", "reconciliations", "variations", "explanations", "review_coverage"],
     "excel_reconciliation": ["comparison_scope", "mapped_amounts"],
@@ -125,6 +126,9 @@ def exact_money(method):
 def execute(pack: str, code: str, sources: list[bytes], tolerance: str, policy=None):
     tol = number(tolerance)
     try:
+        if pack == "financial_workbook":
+            from .financial_workbook import control
+            return control(code, sources, tol, policy or {})
         if pack in {"dossier_review", "dossier_review_xlsx"}:
             from .dossier_review import review_control
             return review_control(code, sources[0], tol, policy or {})

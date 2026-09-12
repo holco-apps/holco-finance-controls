@@ -199,3 +199,29 @@ See [SECURITY.md](SECURITY.md) for responsible disclosure and
 ## Licence
 
 MIT. Copyright © 2026 HOLCO INVEST.
+
+## Free P&L workbook review
+
+The `financial_workbook` pack accepts **two immutable sources**: original XLSX
+bytes and a JSON `holco.control-context/1` snapshot with `profile`, `memory`,
+`rules` and `drafts` arrays. Context provenance and access control belong to the
+trusted host adapter; registering JSON alone does not establish authenticity.
+
+A plan requires `required_period` and exposes `workbook_scope`: exact recognized
+labels, row references, period headers and actual/budget column candidates.
+Merged headers preserve cumulative versus monthly distinctions. Multiple
+candidates require a new plan with `policy.pnl_mapping` set to a candidate ID
+before starting; a unique candidate is still a proposal approved with the plan.
+Unrecognized workbooks retain technical controls and explicit missing coverage.
+
+Six families cover source scope, stored errors/missing caches, vertical SUM unit
+mixes (including shared SUM formulas), four signed P&L equation patterns,
+actual/budget differences for labelled rows, and separately inconclusive business
+rules. No materiality threshold suppresses recognized rows. Numeric blanks are
+never silently replaced with zero. Free-text memories can be associated by
+keywords, explicitly as navigation aids, without determining cause or resolution.
+
+No Excel recalculation, external ledger retrieval, arbitrary formula evaluation,
+automatic semantic rule execution, or professional assurance is provided. The
+mapping assumes revenues positive and expenses negative and requires review.
+Tests remain fully synthetic; customer acceptance evidence is managed separately.

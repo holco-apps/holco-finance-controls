@@ -112,7 +112,7 @@ class Engine:
     def plan(self, source_ids: list[str], pack: str, tolerance="0.01", supersedes=None, policy=None):
         if pack not in CATALOG:
             raise ValueError("unknown control pack")
-        if len(source_ids) != (2 if pack in {"workbook_comparison", "erp_agent_response", "excel_reconciliation"} else 1):
+        if len(source_ids) != (2 if pack in {"financial_workbook", "workbook_comparison", "erp_agent_response", "excel_reconciliation"} else 1):
             raise ValueError("wrong number of sources for pack")
         if pack == "excel_reconciliation" and len(set(source_ids)) != 2:
             raise ValueError("reconciliation requires distinct sources")
@@ -120,8 +120,10 @@ class Engine:
         if tol < 0:
             raise ValueError("tolerance must be nonnegative")
         policy = policy or {}
-        if set(policy) - {"objective", "allowed_tools", "required_tools", "required_period", "required_currency", "required_scope"}:
+        if set(policy) - {"objective", "allowed_tools", "required_tools", "required_period", "required_currency", "required_scope", "pnl_mapping"}:
             raise ValueError("unsupported policy fields")
+        if "pnl_mapping" in policy and (pack != "financial_workbook" or not isinstance(policy["pnl_mapping"], str) or len(policy["pnl_mapping"]) > 200):
+            raise ValueError("invalid financial mapping")
         for key in ("objective", "required_period", "required_currency", "required_scope"):
             if key in policy and (not isinstance(policy[key], str) or not 1 <= len(policy[key]) <= 100):
                 raise ValueError("request criteria must be bounded nonempty strings")
@@ -168,6 +170,13 @@ class Engine:
             from .review_xlsx import read_xlsx_review
             _, body["review_scope"] = read_xlsx_review(self._source(source_ids[0])[1])
             body["exclusions"] += ["other worksheets", "formula recalculation", "independent ERP reconciliation"]
+        if pack == "financial_workbook":
+            from .financial_workbook import discover, context_data
+            if not policy.get("required_period"):
+                raise ValueError("financial workbook requires a period")
+            context_data(self._source(source_ids[1])[1])
+            body["workbook_scope"] = discover(self._source(source_ids[0])[1], policy["required_period"], policy.get("pnl_mapping"))
+            body["exclusions"] += ["formula recalculation", "independent ledger reconciliation", "automatic interpretation of free-text rules"]
         sha = digest(canonical(body).encode())
         pid = "plan_" + uuid.uuid4().hex
         self.db.execute("INSERT INTO plans VALUES (?,?,?)", (pid, sha, canonical(body)))
@@ -197,6 +206,8 @@ class Engine:
         sha, plan = self._plan(plan_id)
         if sha != approved_plan_sha256:
             raise ValueError("approved plan hash mismatch")
+        if plan.get("workbook_scope", {}).get("requires_selection"):
+            raise ValueError("choose a financial comparison before starting")
         rid = "run_" + uuid.uuid4().hex
         body = dict(run_id=rid, plan_id=plan_id, plan_sha256=sha, results=[],
                     created_at=now(), state="PLANNED", stop_reason="not_started",
