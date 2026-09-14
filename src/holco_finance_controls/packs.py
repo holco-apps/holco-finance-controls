@@ -13,7 +13,7 @@ from xml.etree import ElementTree as ET
 
 MAX_BYTES = 10 * 1024 * 1024
 MAX_CELLS = 500_000
-VERSION = "0.4.1"
+VERSION = "0.5.0"
 CATALOG = {
     "financial_workbook": ["workbook_scope", "workbook_errors", "formula_units", "financial_equations", "analytical_variances", "context_review"],
     "dossier_review_xlsx": ["source_scope", "reconciliations", "variations", "explanations", "review_coverage"],

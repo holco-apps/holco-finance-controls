@@ -1,0 +1,80 @@
+{
+  "schema": "holco.golden-domain/1",
+  "domain": "reconciliation",
+  "synthetic": true,
+  "scope": "Bounded arithmetic and observation contracts, not professional domain validation.",
+  "cases": [
+    {
+      "case_id": "reconciliation-exact",
+      "pack": "reconciliation_csv",
+      "control_id": "amounts",
+      "sources": [
+        "id,expected,observed\na,12400,12400\n"
+      ],
+      "tolerance": "0.01",
+      "policy": {},
+      "expected_status": "PASS",
+      "oracle": "Both independent columns contain 12400."
+    },
+    {
+      "case_id": "reconciliation-wrong",
+      "pack": "reconciliation_csv",
+      "control_id": "amounts",
+      "sources": [
+        "id,expected,observed\na,12400,12900\n"
+      ],
+      "tolerance": "0.01",
+      "policy": {},
+      "expected_status": "FAIL",
+      "oracle": "Absolute difference 500 exceeds 0.01."
+    },
+    {
+      "case_id": "reconciliation-boundary",
+      "pack": "reconciliation_csv",
+      "control_id": "amounts",
+      "sources": [
+        "id,expected,observed\na,100,100.01\n"
+      ],
+      "tolerance": "0.01",
+      "policy": {},
+      "expected_status": "PASS",
+      "oracle": "Difference equals inclusive tolerance."
+    },
+    {
+      "case_id": "reconciliation-outside",
+      "pack": "reconciliation_csv",
+      "control_id": "amounts",
+      "sources": [
+        "id,expected,observed\na,100,100.011\n"
+      ],
+      "tolerance": "0.01",
+      "policy": {},
+      "expected_status": "FAIL",
+      "oracle": "Difference 0.011 exceeds tolerance."
+    },
+    {
+      "case_id": "reconciliation-large",
+      "pack": "reconciliation_csv",
+      "control_id": "amounts",
+      "sources": [
+        "id,expected,observed\na,1000000000000000.01,1000000000000000.03\n"
+      ],
+      "tolerance": "0.01",
+      "policy": {},
+      "expected_status": "FAIL",
+      "oracle": "Exact difference 0.02 must survive large magnitude."
+    },
+    {
+      "case_id": "reconciliation-missing",
+      "pack": "reconciliation_csv",
+      "control_id": "amounts",
+      "sources": [
+        "id,expected,observed\na,100,\n"
+      ],
+      "tolerance": "0.01",
+      "policy": {},
+      "expected_status": "INCONCLUSIVE",
+      "oracle": "A missing observation must not become zero."
+    }
+  ]
+}

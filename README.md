@@ -4,15 +4,36 @@
 
 **Check a financial agent's output against explicit data and rules. Keep the evidence when it fails.**
 
-HOLCO Finance Controls is an experimental, local control engine with persistent
-runs and an MCP interface. It separates the agent producing a result from the
+HOLCO Finance Controls publishes an **open control protocol, 40 explicit
+requirements, portable conformance vectors and a local reference implementation**.
+The reference implementation has persistent runs and an MCP interface. It separates the agent producing a result from the
 checks that test it and the human deciding whether to use it.
 
 > Deterministic when possible. AI when necessary. Human when accountable.
 
-**Version 0.4.1 · Alpha · Python 3.11+ · MIT.** The examples are synthetic.
+**Reference 0.5.0 · Protocol 1.3.0 · Alpha · Python 3.11+ · MIT.** The examples are synthetic.
 The public engine is usable on its own; private gateways, credentials, customer
 data, connectors and product hosting are not needed to try it.
+
+## Start with the protocol or test your implementation
+
+- [CONTROL_PROTOCOL.md](CONTROL_PROTOCOL.md): intake → understanding → adapted plan → human confirmation → deterministic checks → labelled AI review → accountable closure with evidence.
+- [40 control requirements](CONTROL_CATALOG.md): 33 bounded reference implementations with regression tests; 7 host requirements. Machine-readable [catalogue](spec/control-catalog.json).
+- [Conformance suite](CONFORMANCE.md): 24 synthetic vectors across reconciliation, FEC, cash and closing. Export JSON tasks for a builder in any language.
+- [Public financial data index](PUBLIC_DATA_INDEX.md): official sources, useful checks, access notes and limitations. No customer data or calibration.
+
+```sh
+# After installing the package below:
+holco-controls-conformance --self-test
+holco-controls-conformance --tasks > tasks.json
+# Run your control implementation on tasks.json, then:
+holco-controls-conformance --check your-responses.json
+```
+
+A matching negative verdict passes a conformance vector. This is a **scoped,
+self-tested interoperability profile**, not a certification or an unseen financial
+accuracy benchmark. The hosted production service, console, live ERP adapters,
+customer data and private calibration are outside this repository.
 
 ## Try the complete workflow in two minutes
 
@@ -120,7 +141,8 @@ source tampering, wrong plan/build identity, retained failures, decimal precisio
 missing Excel caches, tool policy, ERP capture receipts and the stdio lifecycle.
 Without the optional MCP dependency, its transport test is explicitly skipped.
 
-The four-case [Golden Set](examples/golden_set.json) is a readable example, not
+The original four-case [Golden Set](examples/golden_set.json) and the 24-case
+[domain suites](CONFORMANCE.md) are readable synthetic examples, not
 a financial-accuracy benchmark. Unit-test counts and `mean_metric_score` are not
 professional validation, false-positive rates or reliability percentages.
 Independent domain calibration is still required.
@@ -132,7 +154,11 @@ from a calculation, a declared rule or an independently reviewed source.
 
 ## Upgrading
 
-0.4.1 tightens escalation, FEC and Excel verdicts, distinguishes processing limits,
+0.5.0 adds the public specification catalogue and portable conformance profile.
+Use a new database and plans: build identity includes the additional package sources.
+Historical runs require their original compatible implementation.
+
+0.4.1 tightened escalation, FEC and Excel verdicts, distinguishes processing limits,
 and completes MCP input discovery. **Use a new database and new plans.** Historical
 0.3/0.4.0 runs require their original compatible environment; preserve their evidence.
 FEC observed counts now use named objects. [Release notes and compatibility](CHANGELOG.md).

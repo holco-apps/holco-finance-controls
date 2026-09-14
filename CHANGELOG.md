@@ -1,5 +1,15 @@
 # Releases
 
+## 0.5.0 — 2026-09-14
+
+- Protocol 1.3.0: understanding and explicit human confirmation before execution.
+- Forty stable control requirements: 33 reference-tested and 7 host requirements.
+- Twenty-four synthetic domain vectors and portable conformance CLI.
+- Public-source discovery index and contribution templates.
+- No production service, live connectors, private data or calibration added.
+- New databases/plans required: package implementation identity changed.
+
+
 ## 0.4.1 — 2026-09-14
 
 - Missing mandatory escalation is a blocking FAIL; correctly requested approval

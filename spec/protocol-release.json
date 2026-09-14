@@ -1,0 +1,18 @@
+{
+  "schema": "holco.protocol-release/1",
+  "protocol_version": "1.3.0",
+  "reference_version": "0.5.0",
+  "status": "experimental",
+  "documents": {
+    "CONTROL_PROTOCOL.md": "07fa60b6ff7c0d93879fffe4944786167b4c3092bb26910542794989c43550cb",
+    "CONTROL_CATALOG.md": "285d433f2971bff6e5ec9ecf33e65631e14aa5eb341eb6e3b784723862f3fff4",
+    "spec/control-catalog.json": "18325fb89db303da6de358767ac21d1a02bf09259f70331d6b610b47f1226079"
+  },
+  "profiles": [
+    {
+      "id": "holco.golden-verdict/1",
+      "case_count": 24,
+      "scope": "synthetic verdict, input binding and evidence-field presence"
+    }
+  ]
+}

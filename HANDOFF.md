@@ -1,6 +1,6 @@
 # Maintainer handoff
 
-Current public release: **0.4.1**, 2026-09-14.
+Current public release: **0.5.0**, 2026-09-14.
 
 Start with [README](README.md), then [ARCHITECTURE](ARCHITECTURE.md),
 [MCP](MCP.md) and the exact [pack reference](REFERENCE.md).
@@ -47,3 +47,23 @@ Keep amount validity distinct from entry balance; neither synthetic checks nor a
 passing CI establishes expert calibration. Current suite: 94 tests including MCP.
 For 0.4.1, use a new database and plans; preserve historical environments/reports.
 Next: independent expert cases and calibration remain open; no private deployment.
+
+
+## Protocol distribution release — 0.5.0
+
+Protocol 1.3.0, 40 stable requirements (33 reference-tested, 7 host-only), 24
+synthetic domain vectors and portable golden-verdict/1 CLI. The versioned spec
+manifest hashes the normative documents; CI rejects untracked document drift.
+Public data index contains links to institutional sources, not downloaded data,
+customer records or validated calibration. New contribution forms accept scoped
+implementation reports and synthetic counterexamples. Hosted code remains outside
+this package; the existing MIT reference implementation stays independently usable.
+
+Local validation: 101 unittest cases including the real MCP transport; 24/24 golden
+verdicts matched their fixed oracles. Installed wheel conformance and demo verified
+outside the checkout. CI separately validates Python 3.11 and 3.12 on publication.
+These engineering checks do not establish complete protocol conformance, unseen
+agent accuracy, certification, professional assurance or a production SLA.
+
+Next: independent builder integrations and counterexamples; expand domain oracles
+with reviewed, publishable evidence. Do not infer adoption from publishing volume.
