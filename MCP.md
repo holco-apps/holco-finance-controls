@@ -1,6 +1,6 @@
 # Calling HOLCO Finance Controls through MCP
 
-The 0.3 engine exposes six tools over local stdio using the official
+The 0.4 engine exposes six tools over local stdio using the official
 [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk).
 The entry point is `holco-controls-mcp`. It is runnable locally; no production
 HOLCO gateway or console route is installed by this repository.
@@ -128,7 +128,10 @@ does not add tools to HOLCO's deployed MCP.
   and missing formula caches. Does not execute formulas, macros or external links.
 - `workbook_comparison`: compare two independently prepared XLSX snapshots.
   Differences above the absolute tolerance fail; missing or uncomparable cells
-  prevent a pass. Same file contents do not establish engine independence.
+  prevent a pass. This includes identical missing formula caches, error cells and
+  unsupported text/shared-string cells. This conservative whole-workbook pack does
+  not resolve text values; use explicit observed-worksheet mappings for a targeted
+  financial comparison. Same file contents do not establish engine independence.
 
 XLSX is base64-encoded for MCP transport. Large files should be registered by
 the trusted local adapter, avoiding a multi-megabyte round trip through an LLM.
@@ -207,3 +210,9 @@ No public publication tool, ERP write tool or human-approval tool is exposed.
 Corrections create a new source and a plan with `supersedes` set to the previous
 run ID. Old results remain retrievable. No source/run deletion API is provided;
 the operator owns retention and backup of its private database.
+
+## Runner compatibility
+
+Version 0.4 plans bind an implementation source manifest in addition to source and
+plan hashes. Use a new database and new plans when upgrading from 0.3; keep the
+old compatible environment for historical inspection. See [CHANGELOG](CHANGELOG.md).

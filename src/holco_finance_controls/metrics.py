@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal, localcontext
 from typing import Protocol
 
 from .models import Case, Check, Outcome
@@ -27,10 +28,16 @@ class AmountAccuracy:
     name: str = "amount_matches_source"
 
     def measure(self, case: Case) -> Check:
-        difference = abs(case.reported_amount - case.expected_amount)
-        passed = difference <= case.tolerance
-        score = 1.0 if difference == 0 else max(0.0, 1.0 - difference / max(abs(case.expected_amount), 1.0))
-        return Check(self.name, Outcome.PASS if passed else Outcome.FAIL, True, f"absolute difference={difference:.2f}; tolerance={case.tolerance:.2f}", score, _evidence(case))
+        with localcontext() as ctx:
+            ctx.prec = 160
+            difference = abs(case.reported_amount - case.expected_amount)
+            passed = difference <= case.tolerance
+            ratio = max(Decimal(0), Decimal(1) - difference / max(abs(case.expected_amount), Decimal(1)))
+            # A display-only score; never used to determine the verdict.
+            score = float(ratio)
+            detail = f"absolute difference={difference}; tolerance={case.tolerance}"
+        return Check(self.name, Outcome.PASS if passed else Outcome.FAIL, True, detail, score, _evidence(case))
+
 
 
 @dataclass(frozen=True)

@@ -1,6 +1,6 @@
 # HOLCO Financial Control Protocol
 
-Version 1.2 (implementation 0.3.0, additive cross-sheet pack)
+Version 1.2 (implementation 0.4.0; see CHANGELOG.md for compatibility)
 
 > Deterministic when possible. AI when necessary. Human when accountable.
 
@@ -360,3 +360,8 @@ coverage, authoritative spreadsheet recalculation and multi-tenant remote
 deployment require separately implemented and validated integrations.
 `Engine.sign_off` is a trusted local operator API, not an MCP capability.
 No LLM judgement service is called by the engine.
+
+Implementation 0.4 adds strict decimal verdicts, conservative comparison coverage
+and a source-code manifest. This does not expand conformance to the unimplemented
+independent/semantic review gates above. See [CHANGELOG](CHANGELOG.md) and the
+[architecture boundaries](ARCHITECTURE.md).

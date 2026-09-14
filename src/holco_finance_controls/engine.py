@@ -5,7 +5,7 @@ import hashlib
 import json
 import sqlite3
 import uuid
-from functools import wraps
+from functools import wraps, lru_cache
 from threading import RLock
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,6 +19,19 @@ def canonical(value):
 
 def digest(data):
     return hashlib.sha256(data).hexdigest()
+
+
+@lru_cache(maxsize=1)
+def implementation_source_hash():
+    """Cache immutable source identity, not a caller-mutable manifest."""
+    root = Path(__file__).resolve().parent
+    files = {p.name: digest(p.read_bytes()) for p in sorted(root.glob("*.py"))}
+    return digest(canonical(files).encode())
+
+
+def implementation_manifest():
+    """Identity of installed Python sources, not an attestation of their trustworthiness."""
+    return dict(version=VERSION, source_sha256=implementation_source_hash())
 
 
 def now():
@@ -147,7 +160,7 @@ class Engine:
             snapshot, _ = parse_snapshot(self._source(source_ids[0])[1])
             if any(not policy.get(k) for k in ("objective", "required_period", "required_scope")):
                 raise ValueError("snapshot requires objective, period and scope before planning")
-        body = dict(protocol_version=VERSION, pack=pack, tolerance=str(tol), policy=policy,
+        body = dict(protocol_version=VERSION, implementation=implementation_manifest(), pack=pack, tolerance=str(tol), policy=policy,
                     sources=[dict(source_id=s, sha256=self._source(s)[0]) for s in source_ids],
                     controls=list(CATALOG[pack]), created_at=now(), supersedes=supersedes,
                     exclusions=["external source authenticity", "business plausibility", "legal compliance"],
@@ -191,6 +204,8 @@ class Engine:
         body = json.loads(row[1])
         if body["protocol_version"] != VERSION:
             raise ValueError("runner version changed; create a new plan")
+        if body.get("implementation") != implementation_manifest():
+            raise ValueError("runner implementation changed; use the original build or create a new plan")
         for source in body["sources"]:
             if self._source(source["source_id"])[0] != source["sha256"]:
                 raise ValueError("source differs from plan")

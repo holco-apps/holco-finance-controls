@@ -10,11 +10,24 @@ permissions:
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.11', '3.12']
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python }}
           cache: pip
       - run: python -m pip install -e '.[mcp]'
       - run: python -m unittest discover -s tests -v
+      - name: Build and install the wheel independently
+        run: |
+          python -m pip wheel --no-deps . -w dist
+          python -m venv "$RUNNER_TEMP/holco-wheel"
+          "$RUNNER_TEMP/holco-wheel/bin/pip" install dist/*.whl
+      - name: Verify the installed package and Node.js caller
+        run: |
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/holco-wheel/bin/holco-controls-demo" --output "$RUNNER_TEMP/demo-wheel"
+          HOLCO_CONTROLS_DEMO="$RUNNER_TEMP/holco-wheel/bin/holco-controls-demo" node "$GITHUB_WORKSPACE/examples/node-client.mjs" "$RUNNER_TEMP/demo-node"

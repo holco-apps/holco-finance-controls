@@ -13,7 +13,7 @@ from xml.etree import ElementTree as ET
 
 MAX_BYTES = 10 * 1024 * 1024
 MAX_CELLS = 500_000
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 CATALOG = {
     "financial_workbook": ["workbook_scope", "workbook_errors", "formula_units", "financial_equations", "analytical_variances", "context_review"],
     "dossier_review_xlsx": ["source_scope", "reconciliations", "variations", "explanations", "review_coverage"],
@@ -157,7 +157,8 @@ def execute(pack: str, code: str, sources: list[bytes], tolerance: str, policy=N
                         compared += 1
                         changed += delta > tol
                         largest = max(largest, delta)
-                    elif a != b:
+                    else:
+                        # Equal missing caches, errors or unsupported text are not numeric evidence.
                         missing += 1
                 status = "FAIL" if changed else "INCONCLUSIVE" if missing or not compared else "PASS"
                 return result(code, dict(compared=compared, above_tolerance=changed,
