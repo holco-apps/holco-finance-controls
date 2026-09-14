@@ -67,3 +67,17 @@ agent accuracy, certification, professional assurance or a production SLA.
 
 Next: independent builder integrations and counterexamples; expand domain oracles
 with reviewed, publishable evidence. Do not infer adoption from publishing volume.
+
+## GitHub readability — 2026-09-14
+
+Repository landing page shortened from 164 to 120 lines: concrete failure/correction
+example, installation first, then purpose-based navigation. Added a French entry,
+documentation map and examples index with explicit exit-code guidance. Normative
+protocol/catalogue and implementation are unchanged; no new release required.
+GitHub description simplified and Discussions enabled. Added a bug issue form,
+question/security/documentation routing and a PR template. No discussion, outreach
+message or community adoption claim was posted.
+
+Verification: 64 local links/anchors checked across the five new/rewritten entry
+and navigation documents; GitHub YAML parsed, diff whitespace checked. Check CI
+on the published revision and preserve all existing spec fingerprints.
