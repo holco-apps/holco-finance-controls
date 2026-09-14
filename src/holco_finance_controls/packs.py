@@ -13,7 +13,7 @@ from xml.etree import ElementTree as ET
 
 MAX_BYTES = 10 * 1024 * 1024
 MAX_CELLS = 500_000
-VERSION = "0.4.0"
+VERSION = "0.4.1"
 CATALOG = {
     "financial_workbook": ["workbook_scope", "workbook_errors", "formula_units", "financial_equations", "analytical_variances", "context_review"],
     "dossier_review_xlsx": ["source_scope", "reconciliations", "variations", "explanations", "review_coverage"],
@@ -26,6 +26,12 @@ CATALOG = {
     "workbook_comparison": ["population", "numeric_stability"],
     "erp_agent_response": ["source_provenance", "extraction_coverage", "request_scope", "claim_sources", "claim_amounts", "tool_policy"],
 }
+
+
+class InputLimitError(ValueError):
+    def __init__(self, name, maximum):
+        self.limit = dict(name=name, maximum=maximum)
+        super().__init__(f"input limit exceeded: {name} maximum {maximum}")
 
 
 def number(value: str) -> Decimal:
@@ -52,20 +58,32 @@ def table(raw: bytes, fec=False):
         raise ValueError("missing or duplicate columns")
     rows = []
     for row in reader:
-        if len(rows) >= 100_000 or None in row or any(v is None for v in row.values()):
-            raise ValueError("row limit or malformed record")
+        if len(rows) >= 100_000:
+            raise InputLimitError("rows", 100_000)
+        if None in row or any(v is None for v in row.values()):
+            raise ValueError("malformed record")
         rows.append(row)
     return rows
 
 
 def workbook(raw: bytes):
+    try:
+        return _workbook(raw)
+    except KeyError:
+        raise ValueError("missing OOXML part or required attribute") from None
+
+
+def _workbook(raw: bytes):
     """Read raw OOXML values, avoiding parser-created date conversion errors."""
     ns = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
     with zipfile.ZipFile(io.BytesIO(raw)) as z:
         infos = z.infolist()
-        if (len(infos) > 2000 or len({i.filename for i in infos}) != len(infos)
-                or sum(i.file_size for i in infos) > 100 * 1024 * 1024):
-            raise ValueError("workbook archive limits exceeded")
+        if len(infos) > 2000:
+            raise InputLimitError("archive_entries", 2000)
+        if len({i.filename for i in infos}) != len(infos):
+            raise ValueError("duplicate archive entry")
+        if sum(i.file_size for i in infos) > 100 * 1024 * 1024:
+            raise InputLimitError("uncompressed_bytes", 100 * 1024 * 1024)
         if any("vbaProject" in i.filename for i in infos):
             raise ValueError("macro-enabled workbook unsupported")
 
@@ -89,11 +107,11 @@ def workbook(raw: bytes):
             for c in xml(path).iter("{" + ns["s"] + "}c"):
                 visited += 1
                 if visited > 2_000_000:
-                    raise ValueError("styled cell limit exceeded")
+                    raise InputLimitError("visited_cells", 2_000_000)
                 if all(c.find("s:" + tag, ns) is None for tag in ("f", "v", "is")):
                     continue
                 if len(cells) >= MAX_CELLS:
-                    raise ValueError("cell limit exceeded")
+                    raise InputLimitError("stored_cells", MAX_CELLS)
                 coord = c.attrib.get("r", "")
                 if not re.fullmatch(r"[A-Z]{1,3}[1-9][0-9]{0,6}", coord):
                     raise ValueError("invalid cell reference")
@@ -124,7 +142,11 @@ def exact_money(method):
 
 @exact_money
 def execute(pack: str, code: str, sources: list[bytes], tolerance: str, policy=None):
+    if pack not in CATALOG or code not in CATALOG[pack]:
+        raise ValueError("unknown control pack or code")
     tol = number(tolerance)
+    if tol < 0:
+        raise ValueError("tolerance must be nonnegative")
     try:
         if pack == "financial_workbook":
             from .financial_workbook import control
@@ -194,18 +216,30 @@ def execute(pack: str, code: str, sources: list[bytes], tolerance: str, policy=N
             bad = len(rows) - len({tuple(sorted(r.items())) for r in rows})
             return result(code, bad, 0, "FAIL" if bad else "PASS")
         balances = {}
+        invalid = 0
         for r in rows:
             if not r["JournalCode"].strip() or not r["EcritureNum"].strip():
                 raise ValueError("entry identifiers required")
             debit, credit = number(r["Debit"]), number(r["Credit"])
             if debit < 0 or credit < 0 or (debit and credit):
-                raise ValueError("invalid debit/credit combination")
+                invalid += 1
             key = (r["JournalCode"], r["EcritureNum"])
             balances[key] = balances.get(key, Decimal(0)) + debit - credit
-        bad = sum(abs(v) > tol for v in balances.values()) if code == "entry_balance" else 0
-        return result(code, bad, 0, "FAIL" if bad else "PASS")
-    except (ValueError, KeyError, UnicodeError, zipfile.BadZipFile, ET.ParseError, csv.Error):
-        return result(code, "source cannot be interpreted for this control", "valid supported input", "INCONCLUSIVE")
+        if code == "amounts":
+            return result(code, dict(checked_rows=len(rows), invalid_amount_rows=invalid),
+                          dict(invalid_amount_rows=0, rule="nonnegative debit and credit; not both nonzero"),
+                          "FAIL" if invalid else "PASS")
+        if invalid:
+            return result(code, dict(invalid_amount_rows=invalid), "valid amounts before entry balancing", "INCONCLUSIVE")
+        bad = sum(abs(v) > tol for v in balances.values())
+        return result(code, dict(checked_entries=len(balances), unbalanced_entries=bad),
+                      dict(unbalanced_entries=0, absolute_tolerance=str(tol)), "FAIL" if bad else "PASS")
+    except InputLimitError as exc:
+        return result(code, "input exceeds supported processing limit", "input within published limits",
+                      "INCONCLUSIVE", reason_code="INPUT_LIMIT_EXCEEDED", limit=exc.limit)
+    except (ValueError, UnicodeError, zipfile.BadZipFile, ET.ParseError, csv.Error):
+        return result(code, "source cannot be interpreted for this control", "valid supported input",
+                      "INCONCLUSIVE", reason_code="INVALID_INPUT")
 
 
 def erp_control(code, sources, tol, policy):

@@ -64,8 +64,8 @@ class AccountableDecision:
             detail = "human approval not required"
         else:
             detail = "human approval required but not requested"
-        status = Outcome.PASS if passed and not case.requires_human_approval else Outcome.REVIEW
-        return Check(self.name, status, False, detail, 1.0 if passed else 0.0, _evidence(case))
+        status = Outcome.FAIL if not passed else Outcome.REVIEW if case.requires_human_approval else Outcome.PASS
+        return Check(self.name, status, not passed, detail, 1.0 if passed else 0.0, _evidence(case))
 
 
 @dataclass(frozen=True)

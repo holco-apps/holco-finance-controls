@@ -23,4 +23,4 @@ def control_case(case: Case, metrics: Iterable[Metric] = DEFAULT_METRICS) -> Con
         outcome = Outcome.PASS
 
     deterministic = outcome if outcome is not Outcome.REVIEW else Outcome.PASS
-    return ControlResult(case_id=case.case_id, outcome=outcome, checks=checks, deterministic_outcome=deterministic, human_review_required=outcome is Outcome.REVIEW)
+    return ControlResult(case_id=case.case_id, outcome=outcome, checks=checks, deterministic_outcome=deterministic, human_review_required=case.requires_human_approval or outcome is Outcome.REVIEW)

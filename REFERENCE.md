@@ -225,3 +225,16 @@ No Excel recalculation, external ledger retrieval, arbitrary formula evaluation,
 automatic semantic rule execution, or professional assurance is provided. The
 mapping assumes revenues positive and expenses negative and requires review.
 Tests remain fully synthetic; customer acceptance evidence is managed separately.
+
+
+### 0.4.1 verdict clarification
+
+FEC `amounts` validates nonnegative debit/credit amounts with at most one nonzero
+side per row. Its observed result names `checked_rows` and `invalid_amount_rows`.
+`entry_balance` separately names `checked_entries` and `unbalanced_entries`, grouped
+by journal and entry number. Invalid amount combinations fail `amounts` and prevent
+an affirmative balance conclusion. Unreadable numeric data is inconclusive.
+
+A missed mandatory escalation is a blocking failure; an appropriately requested
+approval remains REVIEW. A failure does not erase the requirement for human review.
+This evaluates supplied agent-behaviour declarations, not authenticated approval.

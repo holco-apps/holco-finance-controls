@@ -1,5 +1,32 @@
 # Releases
 
+## 0.4.1 — 2026-09-14
+
+- Missing mandatory escalation is a blocking FAIL; correctly requested approval
+  remains REVIEW. A failure does not erase the human-review requirement.
+- FEC amount validity and entry balance publish distinct named counters. Negative
+  or simultaneous debit/credit amounts FAIL; unreadable numbers are INCONCLUSIVE.
+- Unknown pack/control calls fail before execution. Unexpected missing internal
+  keys propagate; missing OOXML fields are classified at the parser boundary.
+  Table/archive/cell ceilings report INPUT_LIMIT_EXCEEDED with name and maximum;
+  malformed supported input reports INVALID_INPUT without echoing source values.
+- MCP discovery describes all ten packs, ordered sources, required policy and
+  input formats, including holco.control-context/1. No new MCP authority.
+- Equations and mapped comparisons require explicit numeric/error observations.
+  Nested Python modules now participate in implementation identity.
+- A fourth Golden Set case isolates missed escalation. Eight new regression tests
+  were observed failing before correction; 94 tests pass, including real MCP.
+
+### Compatibility
+
+Use **new plans and a separate database**. Version and source fingerprints reject
+0.4.0 runs under 0.4.1. Retain the original package/environment and database to read
+historical reports; do not overwrite or silently migrate their evidence. Consumers
+of FEC `observed` must handle named objects instead of scalar counts. The four-case
+Golden Set now contains two expected FAILs, one PASS and one REVIEW. It is synthetic
+and does not establish expert calibration.
+
+
 ## 0.4.0 — 2026-09-14
 
 - Integrate the advanced public branch: ten packs, including observed Excel

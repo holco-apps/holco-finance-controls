@@ -216,3 +216,28 @@ the operator owns retention and backup of its private database.
 Version 0.4 plans bind an implementation source manifest in addition to source and
 plan hashes. Use a new database and new plans when upgrading from 0.3; keep the
 old compatible environment for historical inspection. See [CHANGELOG](CHANGELOG.md).
+
+
+### Input discovery (0.4.1)
+
+Call `list_control_protocols` before preparing a plan. `input_contracts` covers every
+key in `packs`: `source_count`, ordered `sources`, and `required_policy`. The legacy
+`formats` mapping remains available for every pack. Formats describe decoded
+content; send XLSX bytes as base64 to `register_control_source`.
+
+For `financial_workbook`, register the original XLSX first and then a JSON context:
+
+```json
+{"schema":"holco.control-context/1","profile":[],"memory":[],"rules":[],"drafts":[]}
+```
+
+Provide `policy.required_period`. Empty context lists are structurally valid but
+supply no business evidence; free text is for human review. Other source schemas,
+worksheet headers, mappings and policy requirements are returned by discovery.
+
+Unknown controls are invocation errors. Processing ceilings produce INCONCLUSIVE
+with `reason_code: INPUT_LIMIT_EXCEEDED` and `limit: {name, maximum}` for table,
+archive and cell limits. Invalid supported content produces INVALID_INPUT.
+Unexpected internal missing-key errors propagate instead of blaming the source.
+
+Use a fresh database for 0.4.1; historical 0.4.0 runs need their original environment.

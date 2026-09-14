@@ -1,6 +1,6 @@
 # Maintainer handoff
 
-Current public release: **0.4.0**, 2026-09-14.
+Current public release: **0.4.1**, 2026-09-14.
 
 Start with [README](README.md), then [ARCHITECTURE](ARCHITECTURE.md),
 [MCP](MCP.md) and the exact [pack reference](REFERENCE.md).
@@ -36,3 +36,14 @@ The demo's independent expected statuses test engineering behaviour, not domain 
 0.3 databases require their original compatible environment; 0.4 uses new plans
 and a new database. Never delete an old database merely to make an upgrade pass.
 Private deployments and customer operations are outside this repository's handoff.
+
+
+## Review follow-up — 2026-09-14
+
+The 0.4 review exposed gaps not covered by the prior 86 tests. Added counterexamples
+for escalation, FEC row validity, errors/limits, MCP discovery, missing observations
+and nested build identity. Each new test was observed failing before its fix.
+Keep amount validity distinct from entry balance; neither synthetic checks nor a
+passing CI establishes expert calibration. Current suite: 94 tests including MCP.
+For 0.4.1, use a new database and plans; preserve historical environments/reports.
+Next: independent expert cases and calibration remain open; no private deployment.

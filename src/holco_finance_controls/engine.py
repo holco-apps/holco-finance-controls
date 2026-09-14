@@ -25,7 +25,7 @@ def digest(data):
 def implementation_source_hash():
     """Cache immutable source identity, not a caller-mutable manifest."""
     root = Path(__file__).resolve().parent
-    files = {p.name: digest(p.read_bytes()) for p in sorted(root.glob("*.py"))}
+    files = {p.relative_to(root).as_posix(): digest(p.read_bytes()) for p in sorted(root.rglob("*.py"))}
     return digest(canonical(files).encode())
 
 

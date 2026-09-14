@@ -74,6 +74,14 @@ def parse_reconciliation(sources):
     return left, lc, right, rc, comparisons
 
 
+def observed_number(cell):
+    """Missing error observation is not evidence that the cell has no error."""
+    from .packs import number
+    if "error" not in cell or cell["error"] is not None or type(cell.get("value")) not in (int, float):
+        raise ValueError("missing numeric observation")
+    return number(str(cell["value"]))
+
+
 def reconciliation_control(code, sources, tolerance):
     from .packs import number, result
     left, lc, right, rc, comparisons = parse_reconciliation(sources)
@@ -89,9 +97,7 @@ def reconciliation_control(code, sources, tolerance):
             values = []
             for cells, key in ((lc, "left"), (rc, "right")):
                 cell = cells[item[key]]
-                if "error" not in cell or cell["error"] is not None or type(cell["value"]) not in (int, float):
-                    raise ValueError("missing numeric observation")
-                values.append(number(str(cell["value"])))
+                values.append(observed_number(cell))
             with localcontext() as ctx:
                 ctx.prec = 160
                 delta = values[0] - values[1]
@@ -132,9 +138,7 @@ def snapshot_control(code, raw, tolerance):
                 values = {}
                 for address in addresses:
                     cell = cells[address]
-                    if cell.get("error") or type(cell["value"]) not in (int, float):
-                        raise ValueError("missing numeric observation")
-                    values[address] = number(str(cell["value"]))
+                    values[address] = observed_number(cell)
                 with localcontext() as ctx:
                     ctx.prec = 160
                     expected = sum((values[t["address"]] * number(t.get("coefficient", "1")) for t in check["terms"]), Decimal(0))

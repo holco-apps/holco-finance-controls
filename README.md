@@ -10,7 +10,7 @@ checks that test it and the human deciding whether to use it.
 
 > Deterministic when possible. AI when necessary. Human when accountable.
 
-**Version 0.4.0 · Alpha · Python 3.11+ · MIT.** The examples are synthetic.
+**Version 0.4.1 · Alpha · Python 3.11+ · MIT.** The examples are synthetic.
 The public engine is usable on its own; private gateways, credentials, customer
 data, connectors and product hosting are not needed to try it.
 
@@ -120,7 +120,7 @@ source tampering, wrong plan/build identity, retained failures, decimal precisio
 missing Excel caches, tool policy, ERP capture receipts and the stdio lifecycle.
 Without the optional MCP dependency, its transport test is explicitly skipped.
 
-The three-case [Golden Set](examples/golden_set.json) is a readable example, not
+The four-case [Golden Set](examples/golden_set.json) is a readable example, not
 a financial-accuracy benchmark. Unit-test counts and `mean_metric_score` are not
 professional validation, false-positive rates or reliability percentages.
 Independent domain calibration is still required.
@@ -132,8 +132,7 @@ from a calculation, a declared rule or an independently reviewed source.
 
 ## Upgrading
 
-0.4.0 fixes decimal verdicts and conservative XLSX comparison coverage, and binds
-new plans to the implementation source manifest. It also brings the previously
-separate advanced packs into the main release. **0.3 databases are not migrated:**
-retain their compatible engine for historical inspection; use a new database and
-new plans with 0.4.0. [Release notes and compatibility](CHANGELOG.md).
+0.4.1 tightens escalation, FEC and Excel verdicts, distinguishes processing limits,
+and completes MCP input discovery. **Use a new database and new plans.** Historical
+0.3/0.4.0 runs require their original compatible environment; preserve their evidence.
+FEC observed counts now use named objects. [Release notes and compatibility](CHANGELOG.md).
