@@ -1,6 +1,6 @@
 # Maintainer handoff
 
-Current public release: **0.5.0**, 2026-09-14.
+Current public release: **0.6.0**, 2026-09-20.
 
 Start with [README](README.md), then [ARCHITECTURE](ARCHITECTURE.md),
 [MCP](MCP.md) and the exact [pack reference](REFERENCE.md).
@@ -81,3 +81,12 @@ message or community adoption claim was posted.
 Verification: 64 local links/anchors checked across the five new/rewritten entry
 and navigation documents; GitHub YAML parsed, diff whitespace checked. Check CI
 on the published revision and preserve all existing spec fingerprints.
+
+
+## Hardening release — 0.6.0
+
+Universal default-deny control layer with typed, authored exclusions surfacing
+as NOT_RUN; mandatory machine-readable reason_code on INCONCLUSIVE/NOT_RUN;
+aggregate_amounts against sub-tolerance splitting; doctrine mapping and
+measurement protocol documents; metamorphic invariant tests. Suite: 123 tests.
+Regenerate spec/protocol-release.json whenever a normative document changes.
