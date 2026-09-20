@@ -336,5 +336,6 @@ def control(code, sources, tolerance, policy):
     statuses = [c["status"] for c in checks]
     status = "FAIL" if "FAIL" in statuses else "INCONCLUSIVE" if not statuses or "INCONCLUSIVE" in statuses else "REVIEW" if "REVIEW" in statuses else "PASS"
     return result(code, {"checks": checks}, "Contrôles bornés sur valeurs enregistrées et contexte versionné", status,
+                  reason="missing_evidence" if status == "INCONCLUSIVE" else None,
                   limits=["Pas de recalcul Excel ni de relecture du GL externe", "Règles et mémoire : références à examiner, pas preuve de conformité", "Correspondances et convention de signes à confirmer",
                           "Unités : SUM verticales simples, y compris partagées ; autres expressions hors couverture"])

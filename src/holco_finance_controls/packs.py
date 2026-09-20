@@ -13,14 +13,31 @@ from xml.etree import ElementTree as ET
 
 MAX_BYTES = 10 * 1024 * 1024
 MAX_CELLS = 500_000
-VERSION = "0.3.0"
+VERSION = "0.4.0"
+
+# Machine-readable reasons. Any INCONCLUSIVE or NOT_RUN result must carry one:
+# a regulator does not accept "the computer could not conclude" without knowing
+# whether evidence was missing, input unsupported, a precondition unmet, the
+# control excluded by an accountable plan decision, or simply not executed yet.
+REASONS = ("missing_evidence", "unsupported_input", "precondition_failed",
+           "excluded_by_plan", "not_executed")
+
+# Default-deny universal layer: a plan may only exclude controls listed here.
+# Everything absent from this map is universal and cannot be deselected.
+EXCLUDABLE = {
+    "fec_tsv": ("duplicates",),
+    "dossier_review": ("variations", "explanations"),
+    "dossier_review_xlsx": ("variations", "explanations"),
+    "financial_workbook": ("analytical_variances", "context_review"),
+}
+
 CATALOG = {
     "financial_workbook": ["workbook_scope", "workbook_errors", "formula_units", "financial_equations", "analytical_variances", "context_review"],
     "dossier_review_xlsx": ["source_scope", "reconciliations", "variations", "explanations", "review_coverage"],
     "dossier_review": ["source_scope", "reconciliations", "variations", "explanations", "review_coverage"],
     "excel_reconciliation": ["comparison_scope", "mapped_amounts"],
     "excel_snapshot": ["snapshot_scope", "cell_errors", "formula_references", "declared_equations"],
-    "reconciliation_csv": ["population", "amounts"],
+    "reconciliation_csv": ["population", "amounts", "aggregate_amounts"],
     "fec_tsv": ["population", "dates", "amounts", "entry_balance", "duplicates"],
     "workbook_xlsx": ["population", "stored_errors", "broken_references", "formula_caches"],
     "workbook_comparison": ["population", "numeric_stability"],
@@ -39,7 +56,13 @@ def number(value: str) -> Decimal:
     return result
 
 
-def result(code, observed, expected, status="PASS", **extra):
+def result(code, observed, expected, status="PASS", reason=None, **extra):
+    if status in {"INCONCLUSIVE", "NOT_RUN"}:
+        if reason not in REASONS:
+            raise ValueError(f"a {status} result requires a machine-readable reason among: " + ", ".join(REASONS))
+        extra["reason"] = reason
+    elif reason is not None:
+        raise ValueError("only INCONCLUSIVE or NOT_RUN results carry a reason")
     return dict(control_id=code, status=status, observed=observed,
                 expected=expected, rule_version=VERSION, **extra)
 
@@ -143,7 +166,8 @@ def execute(pack: str, code: str, sources: list[bytes], tolerance: str, policy=N
         if pack.startswith("workbook"):
             cells, stats = workbook(sources[0])
             if code == "population":
-                return result(code, stats, "at least one stored cell", "PASS" if cells else "INCONCLUSIVE")
+                return result(code, stats, "at least one stored cell", "PASS" if cells else "INCONCLUSIVE",
+                              reason=None if cells else "missing_evidence")
             if code == "numeric_stability":
                 other, _ = workbook(sources[1])
                 changed = missing = compared = 0
@@ -162,17 +186,41 @@ def execute(pack: str, code: str, sources: list[bytes], tolerance: str, policy=N
                 status = "FAIL" if changed else "INCONCLUSIVE" if missing or not compared else "PASS"
                 return result(code, dict(compared=compared, above_tolerance=changed,
                                          uncomparable=missing, maximum_absolute_delta=str(largest)),
-                              dict(absolute_tolerance=str(tol), same_population=True), status)
+                              dict(absolute_tolerance=str(tol), same_population=True), status,
+                              reason="missing_evidence" if status == "INCONCLUSIVE" else None)
             count = stats[code]
             return result(code, count, 0, "FAIL" if count else "PASS")
         rows = table(sources[0], pack == "fec_tsv")
         if code == "population":
-            return result(code, len(rows), "at least one record", "PASS" if rows else "INCONCLUSIVE")
+            return result(code, len(rows), "at least one record", "PASS" if rows else "INCONCLUSIVE",
+                          reason=None if rows else "missing_evidence")
         if not rows:
-            return result(code, 0, "records required", "INCONCLUSIVE")
+            return result(code, 0, "records required", "INCONCLUSIVE", reason="missing_evidence")
         if pack == "reconciliation_csv":
             if len({r["id"] for r in rows}) != len(rows) or any(not r["id"].strip() for r in rows):
                 raise ValueError("missing or duplicate identifiers")
+            if code == "aggregate_amounts":
+                # Per-line tolerance is exploitable by splitting one drift into many
+                # sub-tolerance lines; signed drifts are summed overall and per
+                # optional "group" column (counterparty, period). Aggregate drift is
+                # a signal, framed REVIEW, never an automatic FAIL.
+                has_group = "group" in rows[0]
+                net, grouped = Decimal(0), {}
+                for r in rows:
+                    signed = number(r["observed"]) - number(r["expected"])
+                    net += signed
+                    if has_group:
+                        key = r["group"].strip()
+                        if not key:
+                            raise ValueError("empty group identifier")
+                        grouped[key] = grouped.get(key, Decimal(0)) + signed
+                offenders = sorted(k for k, v in grouped.items() if abs(v) > tol)
+                drifted = abs(net) > tol or bool(offenders)
+                return result(code, dict(net_signed_drift=str(net), groups=len(grouped),
+                                         groups_above_tolerance=offenders[:100]),
+                              dict(absolute_tolerance=str(tol),
+                                   aggregation="signed observed minus expected, summed overall and per optional group column"),
+                              "REVIEW" if drifted else "PASS")
             deltas = [abs(number(r["observed"]) - number(r["expected"])) for r in rows]
             bad = sum(d > tol for d in deltas)
             return result(code, dict(compared=len(deltas), above_tolerance=bad,
@@ -204,7 +252,8 @@ def execute(pack: str, code: str, sources: list[bytes], tolerance: str, policy=N
         bad = sum(abs(v) > tol for v in balances.values()) if code == "entry_balance" else 0
         return result(code, bad, 0, "FAIL" if bad else "PASS")
     except (ValueError, KeyError, UnicodeError, zipfile.BadZipFile, ET.ParseError, csv.Error):
-        return result(code, "source cannot be interpreted for this control", "valid supported input", "INCONCLUSIVE")
+        return result(code, "source cannot be interpreted for this control", "valid supported input", "INCONCLUSIVE",
+                      reason="unsupported_input")
 
 
 def erp_control(code, sources, tol, policy):
@@ -219,17 +268,20 @@ def erp_control(code, sources, tol, policy):
         if not isinstance(records, list) or not isinstance(claims, list) or len(records) > 100_000 or len(claims) > 1000:
             raise ValueError("invalid population")
         if not records or not claims:
-            return result(code, "empty source or claims", "nonempty records and claims", "INCONCLUSIVE")
+            return result(code, "empty source or claims", "nonempty records and claims", "INCONCLUSIVE",
+                          reason="missing_evidence")
         by_id = {r["id"]: r for r in records}
         if (len(by_id) != len(records) or len({c["id"] for c in claims}) != len(claims)
                 or any(not isinstance(r["id"], str) or not r["id"] for r in records + claims)):
             raise ValueError("duplicate or missing IDs")
         if code == "source_provenance":
-            return result(code, "receipt checked only by persistent engine", "trusted capture receipt", "INCONCLUSIVE")
+            return result(code, "receipt checked only by persistent engine", "trusted capture receipt", "INCONCLUSIVE",
+                          reason="precondition_failed")
         if code == "request_scope":
             keys = {"required_period": "period", "required_currency": "currency", "required_scope": "scope"}
             if any(not policy.get(k) for k in keys):
-                return result(code, "request criteria missing from plan", "approved period, currency and scope", "INCONCLUSIVE")
+                return result(code, "request criteria missing from plan", "approved period, currency and scope", "INCONCLUSIVE",
+                              reason="precondition_failed")
             matches = all(all(c[field] == policy[k] for k, field in keys.items()) for c in claims)
             return result(code, dict(matches_approved_request=matches), "all claims satisfy approved request criteria", "PASS" if matches else "FAIL")
         if code == "extraction_coverage":
@@ -238,7 +290,8 @@ def erp_control(code, sources, tol, policy):
                         and type(coverage.get("expected_records")) is int
                         and coverage["expected_records"] == len(records))
             return result(code, dict(received=len(records), complete=complete),
-                          "complete extraction, no next cursor, expected count matches", "PASS" if complete else "INCONCLUSIVE")
+                          "complete extraction, no next cursor, expected count matches", "PASS" if complete else "INCONCLUSIVE",
+                          reason=None if complete else "missing_evidence")
         if code in {"claim_sources", "claim_amounts"}:
             bad = unknown = 0
             max_delta = Decimal(0)
@@ -273,11 +326,13 @@ def erp_control(code, sources, tol, policy):
         calls = snapshot.get("tool_calls")
         allowed, required = policy.get("allowed_tools", []), policy.get("required_tools", [])
         if not allowed or not isinstance(calls, list) or not calls:
-            return result(code, "missing trace or tool policy", "trusted read-only trace and explicit allowed tools", "INCONCLUSIVE")
+            return result(code, "missing trace or tool policy", "trusted read-only trace and explicit allowed tools", "INCONCLUSIVE",
+                          reason="missing_evidence" if allowed else "precondition_failed")
         seen = {c["name"] for c in calls}
         bad = any(c["name"] not in allowed or c.get("operation") != "read" or c.get("status") != "success" for c in calls)
         bad |= not set(required) <= seen
         return result(code, dict(calls=len(calls), policy_satisfied=not bad),
                       "allowed, successful read-only calls; required tools present", "FAIL" if bad else "PASS")
     except (ValueError, KeyError, TypeError, AttributeError):
-        return result(code, "invalid ERP snapshot or answer schema", "documented JSON schema", "INCONCLUSIVE")
+        return result(code, "invalid ERP snapshot or answer schema", "documented JSON schema", "INCONCLUSIVE",
+                      reason="unsupported_input")

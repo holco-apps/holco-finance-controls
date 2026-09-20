@@ -42,7 +42,11 @@ def build_server(engine):
 
     @server.tool()
     def prepare_control_plan(source_ids: list[str], pack: str, tolerance: str = "0.01", supersedes: str | None = None, policy: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Return exact scope, exclusions and hash. Show the plan to the requester before starting."""
+        """Return exact scope, exclusions and hash. Show the plan to the requester before starting.
+
+        Control exclusions are a trusted operator decision taken outside MCP:
+        this tool always plans the full catalogue of the pack.
+        """
         return engine.plan(source_ids, pack, tolerance, supersedes, policy)
 
     @server.tool()

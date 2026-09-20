@@ -35,7 +35,7 @@ class MCPTests(unittest.IsolatedAsyncioTestCase):
             async with Client(params) as client:
                 final = await call(client, "advance_control_run", {"run_id": rid, "max_controls": 2})
                 self.assertEqual(final["outcome"], "FAIL")
-                self.assertEqual(final["executed"], 2)
+                self.assertEqual(final["executed"], 3)
                 self.assertEqual(final["counts"]["NOT_RUN"], 0)
                 reports = await asyncio.gather(*[call(client, "get_control_report", {"run_id": rid}) for _ in range(3)])
                 self.assertTrue(all(r["report_sha256"] == final["report_sha256"] for r in reports))

@@ -43,6 +43,29 @@ An independent professional or adversarial assessment is still a distinct
 step: repeating the same code only establishes repeatability. No production
 console or remote HOLCO MCP service is changed by installing this package.
 
+## Universal layer, reason codes and aggregate drift (0.4)
+
+Three mechanisms added in response to the adversarial reviews of September
+2026:
+
+- **A plan cannot silently weaken itself.** Controls are universal by default;
+  a plan may only exclude controls its pack explicitly lists as excludable,
+  and every exclusion is a typed record (control, reason, author, timestamp)
+  that surfaces in the report as `NOT_RUN` with reason `excluded_by_plan`.
+  The excluded control stays in the denominator, so the run can never
+  aggregate to `PASS` and can never be signed off. Exclusions are a trusted
+  operator decision: they are not exposed over MCP.
+- **Every non-conclusive status says why.** An `INCONCLUSIVE` or `NOT_RUN`
+  result must carry a machine-readable reason (`missing_evidence`,
+  `unsupported_input`, `precondition_failed`, `excluded_by_plan`,
+  `not_executed`); constructing one without a reason raises. Reports expose
+  `not_run_reasons` so a silent count can no longer hide a gap.
+- **Per-line tolerance cannot be defeated by splitting.** The
+  `aggregate_amounts` control of the reconciliation pack sums signed drifts
+  overall and per optional `group` column (counterparty, period): many
+  sub-tolerance lines drifting in the same direction surface as `REVIEW`.
+  It is a signal, never an automatic `FAIL`.
+
 ## Structured dossier review
 
 The additive `dossier_review` pack expects UTF-8 semicolon CSV with exact columns:

@@ -339,6 +339,13 @@ An implementation conforms to this protocol only if automated tests prove that:
 - changing source bytes invalidates a checkpoint;
 - duplicate case IDs are rejected;
 - a missing required control yields `NOT_RUN` or `INCONCLUSIVE`, not `PASS`;
+- a universal control cannot be excluded from a plan, and an allowed exclusion
+  is a typed, authored, timestamped record that surfaces as `NOT_RUN` and
+  prevents a global `PASS`;
+- an `INCONCLUSIVE` or `NOT_RUN` result cannot be constructed without a
+  machine-readable reason;
+- splitting one drift into many sub-tolerance lines is surfaced by an
+  aggregate control;
 - a blocking deterministic failure survives model and reviewer input;
 - a material engine delta cannot produce `PASS`;
 - incomplete runs exit non-zero;
@@ -346,6 +353,9 @@ An implementation conforms to this protocol only if automated tests prove that:
 - counts reconcile to the declared control population;
 - correction runs preserve a link to the superseded run.
 
+The 0.4 implementation adds the universal control layer with typed, authored
+exclusions, the machine-readable reason taxonomy for `INCONCLUSIVE` and
+`NOT_RUN`, and the aggregate drift control against tolerance splitting.
 The 0.3 implementation adds persistent sources, hashed plans, bounded runs,
 durable cumulative results, correction links, local review recording and six
 stdio MCP tools. File packs cover CSV reconciliation, a technical FEC subset,

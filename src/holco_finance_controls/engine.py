@@ -10,7 +10,7 @@ from threading import RLock
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .packs import CATALOG, MAX_BYTES, VERSION, execute, number, result
+from .packs import CATALOG, EXCLUDABLE, MAX_BYTES, VERSION, execute, number, result
 
 
 def canonical(value):
@@ -109,9 +109,28 @@ class Engine:
         return dict(source_id=sid, sha256=digest(snapshot), bytes=len(snapshot))
 
     @serialized
-    def plan(self, source_ids: list[str], pack: str, tolerance="0.01", supersedes=None, policy=None):
+    def plan(self, source_ids: list[str], pack: str, tolerance="0.01", supersedes=None, policy=None,
+             control_exclusions=None):
         if pack not in CATALOG:
             raise ValueError("unknown control pack")
+        # Universal layer: a plan may only exclude controls the pack lists as
+        # excludable, and every exclusion is a typed, authored, timestamped
+        # record that surfaces in the report as NOT_RUN. A run with an excluded
+        # control can therefore never aggregate to PASS nor be signed off.
+        exclusions = []
+        for entry in control_exclusions or []:
+            if not isinstance(entry, dict) or set(entry) != {"control_id", "reason", "author"}:
+                raise ValueError("an exclusion declares exactly control_id, reason and author")
+            if any(not isinstance(entry[k], str) or not 1 <= len(entry[k]) <= (300 if k == "reason" else 100)
+                   for k in entry):
+                raise ValueError("exclusion fields must be bounded nonempty strings")
+            if entry["control_id"] not in CATALOG[pack]:
+                raise ValueError("unknown control for this pack: " + entry["control_id"])
+            if entry["control_id"] not in EXCLUDABLE.get(pack, ()):
+                raise ValueError("universal control cannot be excluded: " + entry["control_id"])
+            if any(e["control_id"] == entry["control_id"] for e in exclusions):
+                raise ValueError("duplicate exclusion: " + entry["control_id"])
+            exclusions.append(dict(entry, excluded_at=now()))
         if len(source_ids) != (2 if pack in {"financial_workbook", "workbook_comparison", "erp_agent_response", "excel_reconciliation"} else 1):
             raise ValueError("wrong number of sources for pack")
         if pack == "excel_reconciliation" and len(set(source_ids)) != 2:
@@ -149,7 +168,8 @@ class Engine:
                 raise ValueError("snapshot requires objective, period and scope before planning")
         body = dict(protocol_version=VERSION, pack=pack, tolerance=str(tol), policy=policy,
                     sources=[dict(source_id=s, sha256=self._source(s)[0]) for s in source_ids],
-                    controls=list(CATALOG[pack]), created_at=now(), supersedes=supersedes,
+                    controls=list(CATALOG[pack]), control_exclusions=exclusions,
+                    created_at=now(), supersedes=supersedes,
                     exclusions=["external source authenticity", "business plausibility", "legal compliance"],
                     required_review="trusted operator sign-off; not provided by MCP")
         if snapshot is not None:
@@ -239,12 +259,20 @@ class Engine:
                     break
                 data = [self._source(s["source_id"])[1] for s in plan["sources"]]
                 code = plan["controls"][index]
-                if plan["pack"] == "erp_agent_response" and code == "source_provenance":
+                excluded = next((e for e in plan.get("control_exclusions", []) if e["control_id"] == code), None)
+                if excluded:
+                    # Excluded controls stay in the denominator: NOT_RUN with the
+                    # authored exclusion attached, never silently absent.
+                    item = result(code, dict(excluded_by_plan=excluded),
+                                  "control executed by the universal layer", "NOT_RUN",
+                                  reason="excluded_by_plan")
+                elif plan["pack"] == "erp_agent_response" and code == "source_provenance":
                     receipt = self.db.execute("SELECT raw_source FROM receipts WHERE source=?", (plan["sources"][0]["source_id"],)).fetchone()
                     sha_raw = self._source(receipt[0])[0] if receipt else None
                     item = result(code, dict(connector_receipt_present=bool(receipt), raw_response_sha256=sha_raw),
                                   "source captured by trusted adapter outside model",
-                                  "PASS" if receipt else "INCONCLUSIVE")
+                                  "PASS" if receipt else "INCONCLUSIVE",
+                                  reason=None if receipt else "missing_evidence")
                 else:
                     item = execute(plan["pack"], code, data, plan["tolerance"], plan["policy"])
                 item["evidence"] = plan["sources"]
@@ -269,7 +297,11 @@ class Engine:
         counts = {s: statuses.count(s) for s in ("PASS", "FAIL", "REVIEW", "INCONCLUSIVE", "NOT_RUN")}
         counts["NOT_RUN"] += not_run
         technical = aggregate(statuses + ["NOT_RUN"] * not_run)
-        return dict(**run, report_schema="holco.control-run/v2", plan=plan,
+        not_run_reasons = ([dict(control_id=r["control_id"], reason=r.get("reason", "not_executed"))
+                            for r in run["results"] if r["status"] == "NOT_RUN"] +
+                           [dict(control_id=c, reason="not_executed")
+                            for c in plan["controls"][len(statuses):]])
+        return dict(**run, report_schema="holco.control-run/v2", plan=plan, not_run_reasons=not_run_reasons,
                     planned=len(plan["controls"]), executed=len(statuses), complete=not_run == 0,
                     counts=counts, deterministic_outcome=technical,
                     outcome=technical if technical != "PASS" or run["state"] == "CLOSED" else "REVIEW",

@@ -101,7 +101,8 @@ def reconciliation_control(code, sources, tolerance):
             findings.append(dict(**item, status="INCONCLUSIVE", reason="missing, nonnumeric or untyped observation"))
     statuses = [f["status"] for f in findings]
     status = "FAIL" if "FAIL" in statuses else "INCONCLUSIVE" if not statuses or "INCONCLUSIVE" in statuses else "PASS"
-    return result(code, dict(checks=findings), "mapped amounts agree within approved tolerance; differences are not automatically rounding", status)
+    return result(code, dict(checks=findings), "mapped amounts agree within approved tolerance; differences are not automatically rounding", status,
+                  reason="missing_evidence" if status == "INCONCLUSIVE" else None)
 
 
 def snapshot_control(code, raw, tolerance):
@@ -116,14 +117,16 @@ def snapshot_control(code, raw, tolerance):
         missing = sum("error" not in c for c in cells.values())
         return result(code, dict(addresses=errors[:100], count=len(errors), missing_error_type=missing),
                       "no typed Excel errors in submitted cells",
-                      "FAIL" if errors else "INCONCLUSIVE" if missing else "PASS")
+                      "FAIL" if errors else "INCONCLUSIVE" if missing else "PASS",
+                      reason="missing_evidence" if not errors and missing else None)
     if code == "formula_references":
         # Ignore string literals: ="#REF!" is not a broken reference.
         broken = [a for a, c in cells.items() if re.search(r"#REF!", re.sub(r'"(?:[^"]|"")*"', '', c.get("formula") or ""), re.I)]
         missing = sum("formula" not in c for c in cells.values())
         return result(code, dict(addresses=broken[:100], count=len(broken), missing_formula_view=missing),
                       "no explicit #REF! outside string literals; no formula execution",
-                      "FAIL" if broken else "INCONCLUSIVE" if missing else "PASS")
+                      "FAIL" if broken else "INCONCLUSIVE" if missing else "PASS",
+                      reason="missing_evidence" if not broken and missing else None)
     if code == "declared_equations":
         findings = []
         for check in data.get("checks", []):
@@ -146,5 +149,6 @@ def snapshot_control(code, raw, tolerance):
                 findings.append(dict(id=check["id"], status="INCONCLUSIVE", reason="missing, nonnumeric or erroneous source"))
         statuses = [f["status"] for f in findings]
         status = "FAIL" if "FAIL" in statuses else "INCONCLUSIVE" if not statuses or "INCONCLUSIVE" in statuses else "PASS"
-        return result(code, dict(checks=findings), "target equals declared weighted sum within approved tolerance; rule suitability requires review", status)
+        return result(code, dict(checks=findings), "target equals declared weighted sum within approved tolerance; rule suitability requires review", status,
+                      reason="missing_evidence" if status == "INCONCLUSIVE" else None)
     raise ValueError("unknown snapshot control")
