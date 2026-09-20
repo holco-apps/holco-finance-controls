@@ -1,264 +1,131 @@
 # HOLCO Finance Controls
 
-A small, reproducible control framework for verifying that financial AI agents
-follow the numbers, sources and business rules, not just that they sound right.
+[![Tests](https://github.com/holco-apps/holco-finance-controls/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/holco-apps/holco-finance-controls/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/holco-apps/holco-finance-controls/releases)
 
-> Deterministic when possible. AI when necessary. Human when accountable.
+**An AI agent gives you a financial answer. What proves it is correct?**
 
-This public repository is a deliberately isolated technical exhibit. It uses
-only synthetic data and contains no HOLCO production code, credentials, client
-names or internal endpoints.
+HOLCO publishes a control protocol, executable checks and synthetic test cases.
+Compare an agent's output with explicit sources and rules, retain the evidence,
+and leave the accountable decision with a human.
 
-## Persistent engine and MCP (0.3)
+[**Try it ↓**](#try-it-locally) · [**Integrate**](INTEGRATION.md) · [**Read the protocol**](CONTROL_PROTOCOL.md) · [**Documentation**](docs/README.md) · [**Français**](README.fr.md)
 
-The executable protocol engine now accepts CSV reconciliation data, technical
-FEC extracts, Excel workbooks and ERP snapshots paired with agent answers.
-It stores immutable source bytes, hashed plans and cumulative control results
-in a private SQLite database. Resuming a run preserves earlier results.
+## One concrete example
 
-The six-tool local MCP interface is documented in [MCP.md](MCP.md), including
-installation, input contracts, trusted ERP capture and deployment boundaries.
-An agent's own source declaration cannot establish ERP provenance. The trusted
-connector adapter captures the raw response before the agent uses it.
+The included demo compares a declared source amount with an agent observation:
 
-```python
-from pathlib import Path
-from holco_finance_controls.engine import Engine
+| Source | Agent observation | What the control records |
+|---|---|---|
+| €12,400 | €12,900 | `FAIL` — €500 discrepancy |
+| €12,400 | €12,400, submitted as a correction | Technical `PASS`; final `REVIEW` pending a human decision |
 
-engine = Engine(Path("/tmp/synthetic-holco-controls.db"))
-try:
-    source = engine.register(b"id,expected,observed\na,100,101\n")
-    plan = engine.plan([source["source_id"]], "reconciliation_csv")
-    run = engine.start(plan["plan_id"], plan["plan_sha256"])
-    report = engine.advance(run["run_id"], max_controls=2)
-    assert report["deterministic_outcome"] == "FAIL"
-finally:
-    engine.close()
-```
+It interrupts and resumes the run, retains the original failure and links the
+correction. These are synthetic examples with declared expected values, not an
+independent ERP capture. [See the complete walkthrough](WALKTHROUGH.md).
 
-The engine provides technical controls and trusted local review recording.
-`excel_reconciliation` adds explicit amount comparisons between two observed
-worksheets, with missing evidence kept inconclusive and no implicit rounding.
-An independent professional or adversarial assessment is still a distinct
-step: repeating the same code only establishes repeatability. No production
-console or remote HOLCO MCP service is changed by installing this package.
+## Try it locally
 
-## Universal layer, reason codes and aggregate drift (0.4)
+**Python 3.11+ required. No API key, LLM, ERP connection or Docker needed.**
 
-Three mechanisms added in response to the adversarial reviews of September
-2026:
-
-- **A plan cannot silently weaken itself.** Controls are universal by default;
-  a plan may only exclude controls its pack explicitly lists as excludable,
-  and every exclusion is a typed record (control, reason, author, timestamp)
-  that surfaces in the report as `NOT_RUN` with reason `excluded_by_plan`.
-  The excluded control stays in the denominator, so the run can never
-  aggregate to `PASS` and can never be signed off. Exclusions are a trusted
-  operator decision: they are not exposed over MCP.
-- **Every non-conclusive status says why.** An `INCONCLUSIVE` or `NOT_RUN`
-  result must carry a machine-readable reason (`missing_evidence`,
-  `unsupported_input`, `precondition_failed`, `excluded_by_plan`,
-  `not_executed`); constructing one without a reason raises. Reports expose
-  `not_run_reasons` so a silent count can no longer hide a gap.
-- **Per-line tolerance cannot be defeated by splitting.** The
-  `aggregate_amounts` control of the reconciliation pack sums signed drifts
-  overall and per optional `group` column (counterparty, period): many
-  sub-tolerance lines drifting in the same direction surface as `REVIEW`.
-  It is a signal, never an automatic `FAIL`.
-
-## Structured dossier review
-
-The additive `dossier_review` pack expects UTF-8 semicolon CSV with exact columns:
-`poste;periode;n_1;n;reporting;explication;montant_explique;piece`.
-Supply `policy={"required_period": "2025", "required_currency": "EUR"}` when
-planning. Five families cover declared period, reconciliations, variations,
-quantified explanations and review coverage. The approved plan records v1
-thresholds: 0.01 EUR reconciliation; variation at least 1,000 EUR and 20% (zero
-base: amount only). At most 2,000 unique rows are accepted.
-
-All compared values come from the supplied table. Document references are
-unverified declarations and never suffice for an automatic professional sign-off.
-Missing evidence is inconclusive; arithmetic contradictions fail; human review
-remains necessary even when the numerical checks pass.
-
-The `dossier_review_xlsx` pack accepts the downloadable XLSX equivalent: one
-visible sheet named `Revue HOLCO`, with the exact eight French headers generated
-by the template below. The plan records its range, included row count and excluded
-sheets; findings retain original worksheet/row references and the XLSX hash.
-Hidden/filtered rows are included. Formulas, merged cells, error values and data
-outside A:H or beyond 2,000 rows are rejected; formulas must be pasted as values.
-Other worksheets are outside this financial review. A workbook without the named
-sheet can still use the existing technical workbook pack.
-
-Generate a reproducible fictitious template (with a separate instruction sheet):
-
-```bash
-python -m holco_finance_controls.review_template /tmp/review-template.xlsx
-```
-
-## Control flow
-
-```mermaid
-flowchart LR
-  A[Financial workflow] --> B[Deterministic checks]
-  B --> C[Source checks]
-  C --> D[Business rules]
-  D --> E[Labelled AI review]
-  E --> F[Human review]
-  F --> G[Regression suite]
-```
-
-The included reference implementation covers the deterministic core through
-small, composable control objects. An AI review may add context, but it
-cannot silently override a failed control.
-
-```python
-from holco_finance_controls import AmountAccuracy, EvidenceCoverage, control_case
-
-result = control_case(case, metrics=[AmountAccuracy(), EvidenceCoverage()])
-assert result.outcome.value == "PASS"
-```
-
-## What is controlled
-
-Each synthetic case contains source facts, an agent answer and explicit
-tolerances. The runner controls:
-
-- numerical agreement with the source facts;
-- source identifiers and evidence coverage;
-- business-rule compliance;
-- escalation when the decision is materially ambiguous.
-- required and forbidden tool use in an agent trajectory.
-
-The control outcome distinguishes:
-
-- `PASS`: all blocking controls pass;
-- `REVIEW`: no blocking failure, but human judgement is required;
-- `FAIL`: at least one blocking control failed.
-- `INCONCLUSIVE`: evidence or an executable method is missing;
-- `NOT_RUN`: a planned control did not execute.
-
-## Run locally
-
-Python 3.11+ is sufficient; the package has no runtime dependency.
-
-```bash
-python -m holco_finance_controls examples/golden_set.json
-python -m holco_finance_controls examples/golden_set.json --format summary
-python -m holco_finance_controls examples/golden_set.json --plan
-python -m holco_finance_controls examples/golden_set.json --max-cases 2
-python -m unittest discover -s tests -v
-```
-
-From a fresh clone, either install the package or expose `src`:
-
-```bash
+```sh
+git clone https://github.com/holco-apps/holco-finance-controls.git
+cd holco-finance-controls
+python3 -m venv .venv
+. .venv/bin/activate
 python -m pip install -e .
-holco-finance-controls examples/golden_set.json
+holco-controls-demo --output demo-evidence
 ```
 
-The command emits JSON Lines plus an aggregate summary so results can be
-archived and compared in CI. It exits with code `1` when any case fails; use
-`--fail-on-review` for a stricter release gate.
+Open `demo-evidence/summary.json`, `report-failed.json` and
+`report-corrected.json`. The demo exits **0** when the expected workflow is verified,
+including the intentional failure. Use a new output directory for each run, or
+omit `--output` for a fresh temporary directory.
 
-Bounded runs emit a checkpoint containing the dataset hash and next case index.
-Resume with `--resume-from INDEX --checkpoint-sha256 HASH`. The hash must match
-the exact dataset bytes, preventing a checkpoint from being applied to another
-version. An interrupted run is incomplete and exits non-zero; cases not
-executed are counted as `NOT_RUN`, never as passes.
+<details>
+<summary>Windows / PowerShell</summary>
 
-The Golden Set CLI is stateless: resuming recomputes the earlier prefix to
-retain its outcomes. Use the persistent engine/MCP for checkpointed file and
-ERP workflows without recomputing prior controls.
+```powershell
+git clone https://github.com/holco-apps/holco-finance-controls.git
+cd holco-finance-controls
+py -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -e .
+holco-controls-demo --output demo-evidence
+```
 
-## Doctrine and measurement
+</details>
 
-[`DOCTRINE.md`](DOCTRINE.md) maps each mechanism to the professional and
-regulatory doctrine it serves (SR 11-7, NEP 240/500, EU AI Act art. 50,
-ISO/IEC 42001, NIST AI RMF, OWASP LLM01, FEC / art. A.47 A-1 LPF), with the
-verification status of every external reference stated.
-[`docs/MEASUREMENT.md`](docs/MEASUREMENT.md) defines how these controls
-become an evidenced claim: per-family precision and recall on a labelled
-truth set, seeded-anomaly recall, evidence coverage, silence tests, and the
-metamorphic invariants executed by
-[`tests/test_metamorphic_invariants.py`](tests/test_metamorphic_invariants.py).
-Repeating the same code proves repeatability; these two documents define the
-path to proving validity.
+## Choose your next step
 
-## Control protocol
+| You want to… | Start here | What you get |
+|---|---|---|
+| Understand the process | [Control protocol](CONTROL_PROTOCOL.md) | Lifecycle, evidence requirements and human gates |
+| Inspect a particular requirement | [40-control catalogue](CONTROL_CATALOG.md) | Stable IDs, failure behaviour and implementation coverage |
+| Test your control implementation | [Conformance guide](CONFORMANCE.md) | 24 synthetic vectors, portable JSON tasks and result checking |
+| Connect an application or agent | [Integration guide](INTEGRATION.md) | Python API, MCP, CLI/JSON and JVM integration boundaries |
+| Choose a file format | [Pack reference](REFERENCE.md) | Exact inputs, controls and exclusions for 10 packs |
+| Find public financial sources | [Data index](PUBLIC_DATA_INDEX.md) | Institutional links, access notes and limitations |
+| Map controls to regulation | [Doctrine mapping](DOCTRINE.md) | SR 11-7, NEP 240/500, AI Act art. 50, ISO 42001, NIST AI RMF, OWASP LLM01, FEC |
+| Measure real error rates | [Measurement protocol](docs/MEASUREMENT.md) | Per-family precision/recall plan, seeded anomalies, silence tests |
 
-The normative workflow is documented in
-[`CONTROL_PROTOCOL.md`](CONTROL_PROTOCOL.md). It formalises intake, planning,
-deterministic execution, separately labelled probabilistic review, accountable
-human decision and proof-bearing closure.
+## Test an implementation
 
-- A plan declares metrics and accountable cases before execution.
-- Each report is bound to the exact dataset bytes with SHA-256.
-- Evidence links stable source IDs to optional source hashes without embedding
-  customer content.
-- Deterministic blocking failures cannot be overridden by an AI judge.
-- `deterministic_outcome` is distinct from the global review decision.
-- Checkpoints preserve partial work after a quota, timeout or manual pause.
+After installation:
 
-## Why this is not a general-purpose LLM judge
+```sh
+holco-controls-conformance --self-test
+holco-controls-conformance --tasks > tasks.json
+```
 
-General LLM quality frameworks are useful for relevancy, style and qualitative
-judgement. HOLCO Finance Controls starts elsewhere: amounts, source coverage,
-forbidden actions and approval boundaries are executable invariants. These
-checks are local, deterministic and model-independent. Probabilistic metrics
-can be added later as explicitly labelled, calibrated evidence.
+Run your implementation on `tasks.json`, then check its response document:
 
-## Golden Set
+```sh
+holco-controls-conformance --check your-responses.json
+```
 
-[`examples/golden_set.json`](examples/golden_set.json) is intentionally small
-and readable. It demonstrates:
+The [response contract and runnable reference adapter](CONFORMANCE.md) explain
+what to emit. A deliberately incorrect input must receive the expected negative
+verdict. Returning `PASS` everywhere fails the suite.
 
-1. a fully grounded cash-position answer (`PASS`);
-2. an answer that is numerically correct but needs accountable approval
-   (`REVIEW`);
-3. a plausible answer that contradicts the ledger (`FAIL`).
+## What is implemented?
 
-Real benchmarks should be versioned, reviewed by domain owners and extended
-with every material production incident. They should never be built from
-customer data without a documented legal basis and publication review.
+**Reference 0.6.0 · Protocol 1.3.0 · Alpha · MIT.**
 
-## Design boundaries
+New in 0.6.0: a default-deny universal control layer (a plan may only exclude
+explicitly excludable controls, through typed, authored, timestamped exclusion
+records that surface as `NOT_RUN` and block a global `PASS`); a mandatory
+machine-readable `reason_code` on every `INCONCLUSIVE` or `NOT_RUN` result,
+with `not_run_reasons` in reports; and an `aggregate_amounts` reconciliation
+control that closes the sub-tolerance splitting exploit. Metamorphic
+invariants guard the deterministic core
+([`tests/test_metamorphic_invariants.py`](tests/test_metamorphic_invariants.py)).
 
-- Control is separate from generation.
-- Deterministic controls run before probabilistic judgement.
-- Evidence is identified by stable source IDs, not prose alone.
-- A reviewer is required for decisions marked accountable.
-- No network call, telemetry or model provider is embedded in this example.
+| Layer | Available here | Boundary |
+|---|---|---|
+| Protocol | 40 versioned requirements | 33 have bounded reference tests; 7 require host implementation |
+| Checks | 10 deterministic packs, persistence, restart and correction lineage | Local single-operator reference; no hosted production service |
+| Conformance | 24 synthetic vectors: reconciliation, FEC, cash and closing | Verdict, input binding and evidence-field presence; not certification |
+| Integration | Python, six MCP stdio tools, CLI/JSON and a Node subprocess example | No bundled Java SDK or HTTP server |
+| AI and human review | Specified roles and trusted local review API | No LLM service or authenticated human identity in this package |
 
-See [SECURITY.md](SECURITY.md) for responsible disclosure and
-[CONTRIBUTING.md](CONTRIBUTING.md) for the publication rules.
+The production console, live ERP adapters, customer records and private calibration
+are outside this repository. A hash identifies bytes; it does not establish source
+truth or human consent. Technical success does not imply professional assurance.
+[Architecture and trust boundaries](ARCHITECTURE.md).
 
-## Licence
+## Help improve the controls
 
-MIT. Copyright © 2026 HOLCO INVEST.
+- [Report a reproducible bug](https://github.com/holco-apps/holco-finance-controls/issues/new?template=bug.yml).
+- [Challenge a requirement](https://github.com/holco-apps/holco-finance-controls/issues/new?template=control-counterexample.yml) with synthetic input and an independent expected result.
+- [Share an implementation report](https://github.com/holco-apps/holco-finance-controls/issues/new?template=integration.yml).
+- [Ask an integration question](https://github.com/holco-apps/holco-finance-controls/discussions).
 
-## Free P&L workbook review
+[Contribution guide](CONTRIBUTING.md) · [Security reporting](SECURITY.md) ·
+[Releases and downloads](https://github.com/holco-apps/holco-finance-controls/releases) ·
+[Compatibility notes](CHANGELOG.md)
 
-The `financial_workbook` pack accepts **two immutable sources**: original XLSX
-bytes and a JSON `holco.control-context/1` snapshot with `profile`, `memory`,
-`rules` and `drafts` arrays. Context provenance and access control belong to the
-trusted host adapter; registering JSON alone does not establish authenticity.
-
-A plan requires `required_period` and exposes `workbook_scope`: exact recognized
-labels, row references, period headers and actual/budget column candidates.
-Merged headers preserve cumulative versus monthly distinctions. Multiple
-candidates require a new plan with `policy.pnl_mapping` set to a candidate ID
-before starting; a unique candidate is still a proposal approved with the plan.
-Unrecognized workbooks retain technical controls and explicit missing coverage.
-
-Six families cover source scope, stored errors/missing caches, vertical SUM unit
-mixes (including shared SUM formulas), four signed P&L equation patterns,
-actual/budget differences for labelled rows, and separately inconclusive business
-rules. No materiality threshold suppresses recognized rows. Numeric blanks are
-never silently replaced with zero. Free-text memories can be associated by
-keywords, explicitly as navigation aids, without determining cause or resolution.
-
-No Excel recalculation, external ledger retrieval, arbitrary formula evaluation,
-automatic semantic rule execution, or professional assurance is provided. The
-mapping assumes revenues positive and expenses negative and requires review.
-Tests remain fully synthetic; customer acceptance evidence is managed separately.
+For 0.5.0, use a new database and plans. Keep original compatible environments for
+historical runs. CI tests Python 3.11/3.12, the installed wheel, MCP and the demo;
+passing tests is not a financial-accuracy benchmark.

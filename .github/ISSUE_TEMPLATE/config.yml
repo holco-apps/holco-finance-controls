@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and integration help
+    url: https://github.com/holco-apps/holco-finance-controls/discussions
+    about: Ask how to use the protocol, reference implementation or conformance profile.
+  - name: Report a security vulnerability privately
+    url: https://github.com/holco-apps/holco-finance-controls/blob/main/SECURITY.md
+    about: Do not disclose vulnerabilities, credentials or client data in a public issue.
+  - name: Documentation map
+    url: https://github.com/holco-apps/holco-finance-controls/blob/main/docs/README.md
+    about: Find the right guide before opening an issue.

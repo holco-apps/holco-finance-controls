@@ -1,0 +1,23 @@
+name: Implementation report
+description: Share a scoped conformance result or integration difficulty.
+title: "[Implementation] "
+body:
+  - type: input
+    id: implementation
+    attributes:
+      label: Implementation, language and revision
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Profile version, command, case counts and reproducible result
+      description: Synthetic evidence only. A self-test result is not certification.
+    validations:
+      required: true
+  - type: textarea
+    id: gaps
+    attributes:
+      label: Limits, unsupported requirements and proposed improvements
+    validations:
+      required: true

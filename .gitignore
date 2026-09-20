@@ -6,3 +6,6 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+# Generated local walkthrough evidence (never publish a user's database).
+demo-evidence/
+demo-node/

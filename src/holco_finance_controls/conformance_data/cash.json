@@ -1,0 +1,104 @@
+{
+  "schema": "holco.golden-domain/1",
+  "domain": "cash",
+  "synthetic": true,
+  "scope": "Bounded arithmetic and observation contracts, not professional domain validation.",
+  "cases": [
+    {
+      "case_id": "cash-balanced",
+      "pack": "excel_snapshot",
+      "control_id": "declared_equations",
+      "sources": [
+        "{\"captured_at\": \"2026-01-01T00:00:00Z\", \"cells\": [{\"address\": \"A1\", \"error\": null, \"formula\": null, \"value\": 1000}, {\"address\": \"B1\", \"error\": null, \"formula\": null, \"value\": -250}, {\"address\": \"C1\", \"error\": null, \"formula\": \"=A1+B1\", \"value\": 750}], \"checks\": [{\"id\": \"rollforward\", \"target\": \"C1\", \"terms\": [{\"address\": \"A1\"}, {\"address\": \"B1\"}]}], \"scope\": \"A1:C1\", \"sheet\": \"Rollforward\", \"workbook\": \"synthetic.xlsx\"}"
+      ],
+      "tolerance": "0.01",
+      "policy": {
+        "objective": "Synthetic roll-forward",
+        "required_period": "2026",
+        "required_scope": "A1:C1"
+      },
+      "expected_status": "PASS",
+      "oracle": "1000 + (-250) = 750."
+    },
+    {
+      "case_id": "cash-wrong",
+      "pack": "excel_snapshot",
+      "control_id": "declared_equations",
+      "sources": [
+        "{\"captured_at\": \"2026-01-01T00:00:00Z\", \"cells\": [{\"address\": \"A1\", \"error\": null, \"formula\": null, \"value\": 1000}, {\"address\": \"B1\", \"error\": null, \"formula\": null, \"value\": -250}, {\"address\": \"C1\", \"error\": null, \"formula\": \"=A1+B1\", \"value\": 760}], \"checks\": [{\"id\": \"rollforward\", \"target\": \"C1\", \"terms\": [{\"address\": \"A1\"}, {\"address\": \"B1\"}]}], \"scope\": \"A1:C1\", \"sheet\": \"Rollforward\", \"workbook\": \"synthetic.xlsx\"}"
+      ],
+      "tolerance": "0.01",
+      "policy": {
+        "objective": "Synthetic roll-forward",
+        "required_period": "2026",
+        "required_scope": "A1:C1"
+      },
+      "expected_status": "FAIL",
+      "oracle": "Closing amount differs by 10 from opening plus movement."
+    },
+    {
+      "case_id": "cash-missing",
+      "pack": "excel_snapshot",
+      "control_id": "declared_equations",
+      "sources": [
+        "{\"captured_at\": \"2026-01-01T00:00:00Z\", \"cells\": [{\"address\": \"A1\", \"error\": null, \"formula\": null, \"value\": 1000}, {\"address\": \"B1\", \"error\": null, \"formula\": null, \"value\": null}, {\"address\": \"C1\", \"error\": null, \"formula\": \"=A1+B1\", \"value\": 750}], \"checks\": [{\"id\": \"rollforward\", \"target\": \"C1\", \"terms\": [{\"address\": \"A1\"}, {\"address\": \"B1\"}]}], \"scope\": \"A1:C1\", \"sheet\": \"Rollforward\", \"workbook\": \"synthetic.xlsx\"}"
+      ],
+      "tolerance": "0.01",
+      "policy": {
+        "objective": "Synthetic roll-forward",
+        "required_period": "2026",
+        "required_scope": "A1:C1"
+      },
+      "expected_status": "INCONCLUSIVE",
+      "oracle": "Movement observation absent; cannot compute closing balance."
+    },
+    {
+      "case_id": "cash-stored-error",
+      "pack": "excel_snapshot",
+      "control_id": "cell_errors",
+      "sources": [
+        "{\"captured_at\": \"2026-01-01T00:00:00Z\", \"cells\": [{\"address\": \"A1\", \"error\": null, \"formula\": null, \"value\": 1000}, {\"address\": \"B1\", \"error\": null, \"formula\": null, \"value\": -250}, {\"address\": \"C1\", \"error\": \"#REF!\", \"formula\": \"=A1+B1\", \"value\": 750}], \"checks\": [{\"id\": \"rollforward\", \"target\": \"C1\", \"terms\": [{\"address\": \"A1\"}, {\"address\": \"B1\"}]}], \"scope\": \"A1:C1\", \"sheet\": \"Rollforward\", \"workbook\": \"synthetic.xlsx\"}"
+      ],
+      "tolerance": "0.01",
+      "policy": {
+        "objective": "Synthetic roll-forward",
+        "required_period": "2026",
+        "required_scope": "A1:C1"
+      },
+      "expected_status": "FAIL",
+      "oracle": "A stored error observation exists at C1."
+    },
+    {
+      "case_id": "cash-unobserved-error",
+      "pack": "excel_snapshot",
+      "control_id": "cell_errors",
+      "sources": [
+        "{\"captured_at\": \"2026-01-01T00:00:00Z\", \"cells\": [{\"address\": \"A1\", \"formula\": null, \"value\": 1000}, {\"address\": \"B1\", \"error\": null, \"formula\": null, \"value\": -250}, {\"address\": \"C1\", \"error\": null, \"formula\": \"=A1+B1\", \"value\": 750}], \"checks\": [{\"id\": \"rollforward\", \"target\": \"C1\", \"terms\": [{\"address\": \"A1\"}, {\"address\": \"B1\"}]}], \"scope\": \"A1:C1\", \"sheet\": \"Rollforward\", \"workbook\": \"synthetic.xlsx\"}"
+      ],
+      "tolerance": "0.01",
+      "policy": {
+        "objective": "Synthetic roll-forward",
+        "required_period": "2026",
+        "required_scope": "A1:C1"
+      },
+      "expected_status": "INCONCLUSIVE",
+      "oracle": "Missing error observation is not proof of no error."
+    },
+    {
+      "case_id": "cash-broken-reference",
+      "pack": "excel_snapshot",
+      "control_id": "formula_references",
+      "sources": [
+        "{\"captured_at\": \"2026-01-01T00:00:00Z\", \"cells\": [{\"address\": \"A1\", \"error\": null, \"formula\": null, \"value\": 1000}, {\"address\": \"B1\", \"error\": null, \"formula\": null, \"value\": -250}, {\"address\": \"C1\", \"error\": null, \"formula\": \"=A1+#REF!\", \"value\": 750}], \"checks\": [{\"id\": \"rollforward\", \"target\": \"C1\", \"terms\": [{\"address\": \"A1\"}, {\"address\": \"B1\"}]}], \"scope\": \"A1:C1\", \"sheet\": \"Rollforward\", \"workbook\": \"synthetic.xlsx\"}"
+      ],
+      "tolerance": "0.01",
+      "policy": {
+        "objective": "Synthetic roll-forward",
+        "required_period": "2026",
+        "required_scope": "A1:C1"
+      },
+      "expected_status": "FAIL",
+      "oracle": "A real broken reference appears in the formula."
+    }
+  ]
+}

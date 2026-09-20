@@ -13,14 +13,16 @@ from xml.etree import ElementTree as ET
 
 MAX_BYTES = 10 * 1024 * 1024
 MAX_CELLS = 500_000
-VERSION = "0.4.0"
+VERSION = "0.6.0"
 
-# Machine-readable reasons. Any INCONCLUSIVE or NOT_RUN result must carry one:
-# a regulator does not accept "the computer could not conclude" without knowing
-# whether evidence was missing, input unsupported, a precondition unmet, the
-# control excluded by an accountable plan decision, or simply not executed yet.
-REASONS = ("missing_evidence", "unsupported_input", "precondition_failed",
-           "excluded_by_plan", "not_executed")
+# Machine-readable reason codes. Any INCONCLUSIVE or NOT_RUN result must carry
+# one: a regulator does not accept "the computer could not conclude" without
+# knowing whether evidence was missing, input invalid or over limits, a
+# precondition unmet, the control excluded by an accountable plan decision, or
+# simply not executed yet. INVALID_INPUT and INPUT_LIMIT_EXCEEDED predate this
+# enforcement (0.4.1) and keep their published meaning.
+REASON_CODES = ("INVALID_INPUT", "INPUT_LIMIT_EXCEEDED", "MISSING_EVIDENCE",
+                "PRECONDITION_FAILED", "EXCLUDED_BY_PLAN", "NOT_EXECUTED")
 
 # Default-deny universal layer: a plan may only exclude controls listed here.
 # Everything absent from this map is universal and cannot be deselected.
@@ -45,6 +47,12 @@ CATALOG = {
 }
 
 
+class InputLimitError(ValueError):
+    def __init__(self, name, maximum):
+        self.limit = dict(name=name, maximum=maximum)
+        super().__init__(f"input limit exceeded: {name} maximum {maximum}")
+
+
 def number(value: str) -> Decimal:
     try:
         result = Decimal(value.strip().replace(",", "."))
@@ -56,13 +64,13 @@ def number(value: str) -> Decimal:
     return result
 
 
-def result(code, observed, expected, status="PASS", reason=None, **extra):
+def result(code, observed, expected, status="PASS", reason_code=None, **extra):
     if status in {"INCONCLUSIVE", "NOT_RUN"}:
-        if reason not in REASONS:
-            raise ValueError(f"a {status} result requires a machine-readable reason among: " + ", ".join(REASONS))
-        extra["reason"] = reason
-    elif reason is not None:
-        raise ValueError("only INCONCLUSIVE or NOT_RUN results carry a reason")
+        if reason_code not in REASON_CODES:
+            raise ValueError(f"a {status} result requires a machine-readable reason_code among: " + ", ".join(REASON_CODES))
+        extra["reason_code"] = reason_code
+    elif reason_code is not None:
+        raise ValueError("only INCONCLUSIVE or NOT_RUN results carry a reason_code")
     return dict(control_id=code, status=status, observed=observed,
                 expected=expected, rule_version=VERSION, **extra)
 
@@ -75,20 +83,32 @@ def table(raw: bytes, fec=False):
         raise ValueError("missing or duplicate columns")
     rows = []
     for row in reader:
-        if len(rows) >= 100_000 or None in row or any(v is None for v in row.values()):
-            raise ValueError("row limit or malformed record")
+        if len(rows) >= 100_000:
+            raise InputLimitError("rows", 100_000)
+        if None in row or any(v is None for v in row.values()):
+            raise ValueError("malformed record")
         rows.append(row)
     return rows
 
 
 def workbook(raw: bytes):
+    try:
+        return _workbook(raw)
+    except KeyError:
+        raise ValueError("missing OOXML part or required attribute") from None
+
+
+def _workbook(raw: bytes):
     """Read raw OOXML values, avoiding parser-created date conversion errors."""
     ns = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
     with zipfile.ZipFile(io.BytesIO(raw)) as z:
         infos = z.infolist()
-        if (len(infos) > 2000 or len({i.filename for i in infos}) != len(infos)
-                or sum(i.file_size for i in infos) > 100 * 1024 * 1024):
-            raise ValueError("workbook archive limits exceeded")
+        if len(infos) > 2000:
+            raise InputLimitError("archive_entries", 2000)
+        if len({i.filename for i in infos}) != len(infos):
+            raise ValueError("duplicate archive entry")
+        if sum(i.file_size for i in infos) > 100 * 1024 * 1024:
+            raise InputLimitError("uncompressed_bytes", 100 * 1024 * 1024)
         if any("vbaProject" in i.filename for i in infos):
             raise ValueError("macro-enabled workbook unsupported")
 
@@ -112,11 +132,11 @@ def workbook(raw: bytes):
             for c in xml(path).iter("{" + ns["s"] + "}c"):
                 visited += 1
                 if visited > 2_000_000:
-                    raise ValueError("styled cell limit exceeded")
+                    raise InputLimitError("visited_cells", 2_000_000)
                 if all(c.find("s:" + tag, ns) is None for tag in ("f", "v", "is")):
                     continue
                 if len(cells) >= MAX_CELLS:
-                    raise ValueError("cell limit exceeded")
+                    raise InputLimitError("stored_cells", MAX_CELLS)
                 coord = c.attrib.get("r", "")
                 if not re.fullmatch(r"[A-Z]{1,3}[1-9][0-9]{0,6}", coord):
                     raise ValueError("invalid cell reference")
@@ -147,7 +167,11 @@ def exact_money(method):
 
 @exact_money
 def execute(pack: str, code: str, sources: list[bytes], tolerance: str, policy=None):
+    if pack not in CATALOG or code not in CATALOG[pack]:
+        raise ValueError("unknown control pack or code")
     tol = number(tolerance)
+    if tol < 0:
+        raise ValueError("tolerance must be nonnegative")
     try:
         if pack == "financial_workbook":
             from .financial_workbook import control
@@ -167,7 +191,7 @@ def execute(pack: str, code: str, sources: list[bytes], tolerance: str, policy=N
             cells, stats = workbook(sources[0])
             if code == "population":
                 return result(code, stats, "at least one stored cell", "PASS" if cells else "INCONCLUSIVE",
-                              reason=None if cells else "missing_evidence")
+                              reason_code=None if cells else "MISSING_EVIDENCE")
             if code == "numeric_stability":
                 other, _ = workbook(sources[1])
                 changed = missing = compared = 0
@@ -181,21 +205,22 @@ def execute(pack: str, code: str, sources: list[bytes], tolerance: str, policy=N
                         compared += 1
                         changed += delta > tol
                         largest = max(largest, delta)
-                    elif a != b:
+                    else:
+                        # Equal missing caches, errors or unsupported text are not numeric evidence.
                         missing += 1
                 status = "FAIL" if changed else "INCONCLUSIVE" if missing or not compared else "PASS"
                 return result(code, dict(compared=compared, above_tolerance=changed,
                                          uncomparable=missing, maximum_absolute_delta=str(largest)),
                               dict(absolute_tolerance=str(tol), same_population=True), status,
-                              reason="missing_evidence" if status == "INCONCLUSIVE" else None)
+                              reason_code="MISSING_EVIDENCE" if status == "INCONCLUSIVE" else None)
             count = stats[code]
             return result(code, count, 0, "FAIL" if count else "PASS")
         rows = table(sources[0], pack == "fec_tsv")
         if code == "population":
             return result(code, len(rows), "at least one record", "PASS" if rows else "INCONCLUSIVE",
-                          reason=None if rows else "missing_evidence")
+                          reason_code=None if rows else "MISSING_EVIDENCE")
         if not rows:
-            return result(code, 0, "records required", "INCONCLUSIVE", reason="missing_evidence")
+            return result(code, 0, "records required", "INCONCLUSIVE", reason_code="MISSING_EVIDENCE")
         if pack == "reconciliation_csv":
             if len({r["id"] for r in rows}) != len(rows) or any(not r["id"].strip() for r in rows):
                 raise ValueError("missing or duplicate identifiers")
@@ -241,19 +266,31 @@ def execute(pack: str, code: str, sources: list[bytes], tolerance: str, policy=N
             bad = len(rows) - len({tuple(sorted(r.items())) for r in rows})
             return result(code, bad, 0, "FAIL" if bad else "PASS")
         balances = {}
+        invalid = 0
         for r in rows:
             if not r["JournalCode"].strip() or not r["EcritureNum"].strip():
                 raise ValueError("entry identifiers required")
             debit, credit = number(r["Debit"]), number(r["Credit"])
             if debit < 0 or credit < 0 or (debit and credit):
-                raise ValueError("invalid debit/credit combination")
+                invalid += 1
             key = (r["JournalCode"], r["EcritureNum"])
             balances[key] = balances.get(key, Decimal(0)) + debit - credit
-        bad = sum(abs(v) > tol for v in balances.values()) if code == "entry_balance" else 0
-        return result(code, bad, 0, "FAIL" if bad else "PASS")
-    except (ValueError, KeyError, UnicodeError, zipfile.BadZipFile, ET.ParseError, csv.Error):
-        return result(code, "source cannot be interpreted for this control", "valid supported input", "INCONCLUSIVE",
-                      reason="unsupported_input")
+        if code == "amounts":
+            return result(code, dict(checked_rows=len(rows), invalid_amount_rows=invalid),
+                          dict(invalid_amount_rows=0, rule="nonnegative debit and credit; not both nonzero"),
+                          "FAIL" if invalid else "PASS")
+        if invalid:
+            return result(code, dict(invalid_amount_rows=invalid), "valid amounts before entry balancing", "INCONCLUSIVE",
+                          reason_code="PRECONDITION_FAILED")
+        bad = sum(abs(v) > tol for v in balances.values())
+        return result(code, dict(checked_entries=len(balances), unbalanced_entries=bad),
+                      dict(unbalanced_entries=0, absolute_tolerance=str(tol)), "FAIL" if bad else "PASS")
+    except InputLimitError as exc:
+        return result(code, "input exceeds supported processing limit", "input within published limits",
+                      "INCONCLUSIVE", reason_code="INPUT_LIMIT_EXCEEDED", limit=exc.limit)
+    except (ValueError, UnicodeError, zipfile.BadZipFile, ET.ParseError, csv.Error):
+        return result(code, "source cannot be interpreted for this control", "valid supported input",
+                      "INCONCLUSIVE", reason_code="INVALID_INPUT")
 
 
 def erp_control(code, sources, tol, policy):
@@ -269,19 +306,19 @@ def erp_control(code, sources, tol, policy):
             raise ValueError("invalid population")
         if not records or not claims:
             return result(code, "empty source or claims", "nonempty records and claims", "INCONCLUSIVE",
-                          reason="missing_evidence")
+                          reason_code="MISSING_EVIDENCE")
         by_id = {r["id"]: r for r in records}
         if (len(by_id) != len(records) or len({c["id"] for c in claims}) != len(claims)
                 or any(not isinstance(r["id"], str) or not r["id"] for r in records + claims)):
             raise ValueError("duplicate or missing IDs")
         if code == "source_provenance":
             return result(code, "receipt checked only by persistent engine", "trusted capture receipt", "INCONCLUSIVE",
-                          reason="precondition_failed")
+                          reason_code="PRECONDITION_FAILED")
         if code == "request_scope":
             keys = {"required_period": "period", "required_currency": "currency", "required_scope": "scope"}
             if any(not policy.get(k) for k in keys):
                 return result(code, "request criteria missing from plan", "approved period, currency and scope", "INCONCLUSIVE",
-                              reason="precondition_failed")
+                              reason_code="PRECONDITION_FAILED")
             matches = all(all(c[field] == policy[k] for k, field in keys.items()) for c in claims)
             return result(code, dict(matches_approved_request=matches), "all claims satisfy approved request criteria", "PASS" if matches else "FAIL")
         if code == "extraction_coverage":
@@ -291,7 +328,7 @@ def erp_control(code, sources, tol, policy):
                         and coverage["expected_records"] == len(records))
             return result(code, dict(received=len(records), complete=complete),
                           "complete extraction, no next cursor, expected count matches", "PASS" if complete else "INCONCLUSIVE",
-                          reason=None if complete else "missing_evidence")
+                          reason_code=None if complete else "MISSING_EVIDENCE")
         if code in {"claim_sources", "claim_amounts"}:
             bad = unknown = 0
             max_delta = Decimal(0)
@@ -327,7 +364,7 @@ def erp_control(code, sources, tol, policy):
         allowed, required = policy.get("allowed_tools", []), policy.get("required_tools", [])
         if not allowed or not isinstance(calls, list) or not calls:
             return result(code, "missing trace or tool policy", "trusted read-only trace and explicit allowed tools", "INCONCLUSIVE",
-                          reason="missing_evidence" if allowed else "precondition_failed")
+                          reason_code="MISSING_EVIDENCE" if allowed else "PRECONDITION_FAILED")
         seen = {c["name"] for c in calls}
         bad = any(c["name"] not in allowed or c.get("operation") != "read" or c.get("status") != "success" for c in calls)
         bad |= not set(required) <= seen
@@ -335,4 +372,4 @@ def erp_control(code, sources, tol, policy):
                       "allowed, successful read-only calls; required tools present", "FAIL" if bad else "PASS")
     except (ValueError, KeyError, TypeError, AttributeError):
         return result(code, "invalid ERP snapshot or answer schema", "documented JSON schema", "INCONCLUSIVE",
-                      reason="unsupported_input")
+                      reason_code="INVALID_INPUT")

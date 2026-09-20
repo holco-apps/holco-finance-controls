@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 
 from holco_finance_controls.engine import Engine
-from holco_finance_controls.packs import CATALOG, EXCLUDABLE, REASONS, execute, result
+from holco_finance_controls.packs import CATALOG, EXCLUDABLE, REASON_CODES, execute, result
 
 FEC = ("JournalCode\tEcritureNum\tEcritureDate\tDebit\tCredit\n"
        "VT\tE1\t20260115\t100.00\t0.00\n"
@@ -19,21 +19,21 @@ FEC = ("JournalCode\tEcritureNum\tEcritureDate\tDebit\tCredit\n"
 
 class ReasonTaxonomy(unittest.TestCase):
     def test_inconclusive_requires_a_valid_reason_both_directions(self):
-        with self.assertRaisesRegex(ValueError, "machine-readable reason"):
+        with self.assertRaisesRegex(ValueError, "machine-readable reason_code"):
             result("c", 0, 0, "INCONCLUSIVE")
         with self.assertRaisesRegex(ValueError, "machine-readable reason"):
-            result("c", 0, 0, "INCONCLUSIVE", reason="because")
-        item = result("c", 0, 0, "INCONCLUSIVE", reason="missing_evidence")
-        self.assertEqual(item["reason"], "missing_evidence")
+            result("c", 0, 0, "INCONCLUSIVE", reason_code="because")
+        item = result("c", 0, 0, "INCONCLUSIVE", reason_code="MISSING_EVIDENCE")
+        self.assertEqual(item["reason_code"], "MISSING_EVIDENCE")
 
     def test_conclusive_statuses_refuse_a_reason(self):
         with self.assertRaisesRegex(ValueError, "only INCONCLUSIVE or NOT_RUN"):
-            result("c", 0, 0, "PASS", reason="missing_evidence")
+            result("c", 0, 0, "PASS", reason_code="MISSING_EVIDENCE")
 
     def test_every_pack_failure_path_carries_a_reason(self):
         report = execute("reconciliation_csv", "amounts", [b"not,a,reconciliation\n1,2,3\n"], "0.01")
         self.assertEqual(report["status"], "INCONCLUSIVE")
-        self.assertIn(report["reason"], REASONS)
+        self.assertIn(report["reason_code"], REASON_CODES)
 
 
 class UniversalLayer(unittest.TestCase):
@@ -75,11 +75,11 @@ class UniversalLayer(unittest.TestCase):
         report = self.engine.advance(run["run_id"], 8)
         excluded = [r for r in report["results"] if r["control_id"] == "duplicates"]
         self.assertEqual(excluded[0]["status"], "NOT_RUN")
-        self.assertEqual(excluded[0]["reason"], "excluded_by_plan")
+        self.assertEqual(excluded[0]["reason_code"], "EXCLUDED_BY_PLAN")
         self.assertEqual(excluded[0]["observed"]["excluded_by_plan"]["author"], "op")
         self.assertTrue(report["complete"])
         self.assertEqual(report["deterministic_outcome"], "INCONCLUSIVE")
-        self.assertIn(dict(control_id="duplicates", reason="excluded_by_plan"),
+        self.assertIn(dict(control_id="duplicates", reason_code="EXCLUDED_BY_PLAN"),
                       report["not_run_reasons"])
 
     def test_plan_without_exclusions_is_unchanged(self):

@@ -41,7 +41,7 @@ class EngineTests(unittest.TestCase):
         first = self.engine.advance(rid, 1)
         self.assertEqual(first["counts"]["NOT_RUN"], 2)
         self.assertEqual(first["outcome"], "INCONCLUSIVE")
-        self.assertEqual([r["reason"] for r in first["not_run_reasons"]], ["not_executed"] * 2)
+        self.assertEqual([r["reason_code"] for r in first["not_run_reasons"]], ["NOT_EXECUTED"] * 2)
         self.engine.close()
         self.engine = Engine(self.path)
         end = self.engine.advance(rid, 2)

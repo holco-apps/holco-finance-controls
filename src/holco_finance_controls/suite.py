@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from decimal import Decimal
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -95,7 +96,7 @@ class SuiteReport:
 
 def load_dataset(path: Path) -> Dataset:
     raw = path.read_bytes()
-    payload = json.loads(raw)
+    payload = json.loads(raw, parse_float=Decimal)
     if isinstance(payload, list):
         name, version, raw_cases = path.stem, "legacy-v0", payload
     elif isinstance(payload, dict) and isinstance(payload.get("cases"), list):

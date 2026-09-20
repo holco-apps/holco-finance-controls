@@ -91,7 +91,7 @@ def review_control(code, raw, tolerance, policy):
     status = "FAIL" if "FAIL" in statuses else "INCONCLUSIVE" if "INCONCLUSIVE" in statuses else "REVIEW" if "REVIEW" in statuses else "PASS"
     return result(code, dict(checks=checks, population=len(rows)),
                   "Contrôles bornés au tableau de revue déclaré", status,
-                  reason="missing_evidence" if status == "INCONCLUSIVE" else None,
+                  reason_code="MISSING_EVIDENCE" if status == "INCONCLUSIVE" else None,
                   method_version="holco.review-worksheet/1", limits=[
                       "Authenticité et exhaustivité comptables non attestées",
                       "Pièces uniquement citées dans ce tableau, non vérifiées automatiquement",

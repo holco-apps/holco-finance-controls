@@ -1,0 +1,367 @@
+{
+  "schema": "holco.control-catalog/1",
+  "protocol_version": "1.3.0",
+  "status": "experimental",
+  "controls": [
+    {
+      "id": "HFC-001",
+      "family": "Intake",
+      "title": "Purpose and intended use",
+      "requirement": "Record the requested decision, entity, period and exclusions before proposing controls.",
+      "failure_behavior": "Missing scope remains NEEDS_INPUT; no full-scope conclusion.",
+      "implementation": "host",
+      "verification": null
+    },
+    {
+      "id": "HFC-002",
+      "family": "Intake",
+      "title": "Document understanding",
+      "requirement": "Treat the filename as an initial clue; cite content evidence and disclose sampled or unreadable regions.",
+      "failure_behavior": "Uncertain type remains a proposal, never a proven business classification.",
+      "implementation": "host",
+      "verification": null
+    },
+    {
+      "id": "HFC-003",
+      "family": "Intake",
+      "title": "Human confirmation of understanding",
+      "requirement": "Obtain explicit confirmation of document interpretation, intended result and proposed scope before material checks.",
+      "failure_behavior": "No confirmation means no material execution.",
+      "implementation": "host",
+      "verification": null
+    },
+    {
+      "id": "HFC-004",
+      "family": "Plan",
+      "title": "Immutable source identity",
+      "requirement": "Bind exact source bytes to SHA-256 and reject changed bytes on resume.",
+      "failure_behavior": "Reject an integrity mismatch.",
+      "implementation": "reference",
+      "verification": "tests/test_engine.py:test_tampered_source_rejected_on_resume"
+    },
+    {
+      "id": "HFC-005",
+      "family": "Plan",
+      "title": "Approved plan identity",
+      "requirement": "Require the exact plan digest supplied at execution to match the stored plan.",
+      "failure_behavior": "Reject a different digest; the host must separately authenticate consent.",
+      "implementation": "reference",
+      "verification": "tests/test_engine.py:test_wrong_plan_hash_rejected"
+    },
+    {
+      "id": "HFC-006",
+      "family": "Plan",
+      "title": "Material scope changes",
+      "requirement": "Create a new plan and renewed human confirmation when meaning, mapping or scope changes.",
+      "failure_behavior": "Earlier consent cannot authorise the new scope.",
+      "implementation": "host",
+      "verification": null
+    },
+    {
+      "id": "HFC-007",
+      "family": "Plan",
+      "title": "Implementation identity",
+      "requirement": "Bind runtime control implementation identity to persisted runs.",
+      "failure_behavior": "Reject incompatible code when continuing a run.",
+      "implementation": "reference",
+      "verification": "tests/test_audit_regressions.py:test_run_remains_pending_review_and_rejects_changed_build"
+    },
+    {
+      "id": "HFC-008",
+      "family": "Population",
+      "title": "Unique case identifiers",
+      "requirement": "Reject duplicate case IDs instead of overwriting evidence.",
+      "failure_behavior": "Duplicate IDs are invalid input.",
+      "implementation": "reference",
+      "verification": "tests/test_suite.py:test_duplicate_case_ids_are_rejected"
+    },
+    {
+      "id": "HFC-009",
+      "family": "Population",
+      "title": "Empty populations",
+      "requirement": "Disclose an empty population; do not treat vacuous totals as assurance.",
+      "failure_behavior": "INCONCLUSIVE for absent data.",
+      "implementation": "reference",
+      "verification": "tests/test_engine.py:test_empty_population_and_duplicate_ids"
+    },
+    {
+      "id": "HFC-010",
+      "family": "Amounts",
+      "title": "Exact decimal comparison",
+      "requirement": "Compare amounts using exact decimal arithmetic and a declared tolerance.",
+      "failure_behavior": "Difference above tolerance is FAIL.",
+      "implementation": "reference",
+      "verification": "tests/test_audit_regressions.py:test_decimal_tolerance_boundary"
+    },
+    {
+      "id": "HFC-011",
+      "family": "Amounts",
+      "title": "Small discrepancies in large amounts",
+      "requirement": "Preserve cents even when the absolute amount is large.",
+      "failure_behavior": "Material decimal difference is not rounded away.",
+      "implementation": "reference",
+      "verification": "tests/test_audit_regressions.py:test_large_amount_small_discrepancy"
+    },
+    {
+      "id": "HFC-012",
+      "family": "Amounts",
+      "title": "Valid numeric observations",
+      "requirement": "Reject booleans, non-finite values and unsupported numeric precision.",
+      "failure_behavior": "Invalid values never become PASS.",
+      "implementation": "reference",
+      "verification": "tests/test_audit_regressions.py:test_invalid_money_and_boolean_flags_rejected"
+    },
+    {
+      "id": "HFC-013",
+      "family": "Sources",
+      "title": "Required source coverage",
+      "requirement": "Compare required source IDs against actual cited IDs.",
+      "failure_behavior": "A missing required citation is FAIL; citation alone is not provenance.",
+      "implementation": "reference",
+      "verification": "tests/test_controls.py:test_missing_source_fails"
+    },
+    {
+      "id": "HFC-014",
+      "family": "Sources",
+      "title": "Independent ERP capture",
+      "requirement": "Require a receipt established by the trusted capture boundary, outside agent JSON.",
+      "failure_behavior": "An agent-declared receipt cannot establish trusted provenance.",
+      "implementation": "reference",
+      "verification": "tests/test_engine.py:test_erp_capture_receipt_cannot_be_forged_by_json"
+    },
+    {
+      "id": "HFC-015",
+      "family": "Sources",
+      "title": "Complete pagination",
+      "requirement": "Inspect pagination metadata from the trusted source capture.",
+      "failure_behavior": "An outstanding cursor makes coverage INCONCLUSIVE.",
+      "implementation": "reference",
+      "verification": "tests/test_erp.py:test_incomplete_pagination"
+    },
+    {
+      "id": "HFC-016",
+      "family": "Sources",
+      "title": "Population count reconciliation",
+      "requirement": "Reconcile captured record counts with the stated expected population.",
+      "failure_behavior": "Truncation makes coverage INCONCLUSIVE.",
+      "implementation": "reference",
+      "verification": "tests/test_erp.py:test_truncated_population"
+    },
+    {
+      "id": "HFC-017",
+      "family": "Sources",
+      "title": "Known unique record references",
+      "requirement": "Reject duplicate and unknown IDs in agent claims.",
+      "failure_behavior": "Invalid referenced populations are FAIL.",
+      "implementation": "reference",
+      "verification": "tests/test_erp.py:test_duplicate_and_unknown_sources"
+    },
+    {
+      "id": "HFC-018",
+      "family": "Sources",
+      "title": "Full-scope totals",
+      "requirement": "Require all relevant records when the declared scope is all-period records.",
+      "failure_behavior": "A selective total cannot pass a full-population claim.",
+      "implementation": "reference",
+      "verification": "tests/test_erp.py:test_selective_total"
+    },
+    {
+      "id": "HFC-019",
+      "family": "Scope",
+      "title": "Request period alignment",
+      "requirement": "Compare claim period with the independently requested period.",
+      "failure_behavior": "Correct arithmetic for another period does not pass request scope.",
+      "implementation": "reference",
+      "verification": "tests/test_erp.py:test_correct_amount_for_wrong_request_is_rejected"
+    },
+    {
+      "id": "HFC-020",
+      "family": "Scope",
+      "title": "Currency and period consistency",
+      "requirement": "Reject sums spanning inconsistent currencies or periods without a declared transformation.",
+      "failure_behavior": "Mixed scope is FAIL in the supported ERP contract.",
+      "implementation": "reference",
+      "verification": "tests/test_erp.py:test_mixed_currency_or_period"
+    },
+    {
+      "id": "HFC-021",
+      "family": "Tools",
+      "title": "Read-only policy",
+      "requirement": "Compare trusted tool traces with allowed operations.",
+      "failure_behavior": "Write operations or missing trusted traces do not pass.",
+      "implementation": "reference",
+      "verification": "tests/test_erp.py:test_write_tool_and_missing_trace"
+    },
+    {
+      "id": "HFC-022",
+      "family": "Tools",
+      "title": "Forbidden tool use",
+      "requirement": "Detect explicitly forbidden tools in the observed trace.",
+      "failure_behavior": "A forbidden call is blocking FAIL.",
+      "implementation": "reference",
+      "verification": "tests/test_controls.py:test_forbidden_tool_fails"
+    },
+    {
+      "id": "HFC-023",
+      "family": "Tools",
+      "title": "Trace authority",
+      "requirement": "Do not replace missing capture traces with the agent own declaration.",
+      "failure_behavior": "Untrusted declarations cannot repair missing evidence.",
+      "implementation": "reference",
+      "verification": "tests/test_erp.py:test_agent_claimed_trace_not_trusted"
+    },
+    {
+      "id": "HFC-024",
+      "family": "FEC",
+      "title": "Debit-credit balance",
+      "requirement": "Check the supported FEC population debit and credit totals.",
+      "failure_behavior": "Unbalanced totals fail; this is not full statutory FEC compliance.",
+      "implementation": "reference",
+      "verification": "tests/test_engine.py:test_fec_balanced_and_unbalanced"
+    },
+    {
+      "id": "HFC-025",
+      "family": "FEC",
+      "title": "Valid line amounts",
+      "requirement": "Validate nonnegative debit/credit observations and invalid dual-sided lines separately from aggregate balance.",
+      "failure_behavior": "Malformed line amounts fail even if totals compensate.",
+      "implementation": "reference",
+      "verification": "tests/test_review_regressions.py:test_fec_amounts_validate_rows_separately_from_balance"
+    },
+    {
+      "id": "HFC-026",
+      "family": "Spreadsheet",
+      "title": "Formula cache coverage",
+      "requirement": "Disclose missing numeric formula observations.",
+      "failure_behavior": "Missing caches are INCONCLUSIVE, including in both compared versions.",
+      "implementation": "reference",
+      "verification": "tests/test_audit_regressions.py:test_missing_formula_cache_in_both_snapshots_is_inconclusive"
+    },
+    {
+      "id": "HFC-027",
+      "family": "Spreadsheet",
+      "title": "Stored errors versus reader warnings",
+      "requirement": "Distinguish actual spreadsheet error cells from reader formatting warnings.",
+      "failure_behavior": "Reader warnings must not be invented as stored Excel errors.",
+      "implementation": "reference",
+      "verification": "tests/test_engine.py:test_excel_raw_error_separate_from_bad_date_format"
+    },
+    {
+      "id": "HFC-028",
+      "family": "Spreadsheet",
+      "title": "Explicit missing observations",
+      "requirement": "Keep missing numeric cells absent instead of replacing them with zero.",
+      "failure_behavior": "Missing evidence cannot establish a balanced calculation.",
+      "implementation": "reference",
+      "verification": "tests/test_financial_workbook.py:test_missing_numeric_evidence_never_zero_filled"
+    },
+    {
+      "id": "HFC-029",
+      "family": "Spreadsheet",
+      "title": "Unit-consistent sums",
+      "requirement": "Detect monetary sums that include percentage cells within supported formula patterns.",
+      "failure_behavior": "A mixed-unit sum is FAIL.",
+      "implementation": "reference",
+      "verification": "tests/test_financial_workbook.py:test_monetary_sum_with_ratio_and_small_difference_not_suppressed"
+    },
+    {
+      "id": "HFC-030",
+      "family": "Spreadsheet",
+      "title": "Period-grain alignment",
+      "requirement": "Do not compare monthly and year-to-date values solely because their end date matches.",
+      "failure_behavior": "An unsupported mapping remains unselected.",
+      "implementation": "reference",
+      "verification": "tests/test_financial_workbook.py:test_month_and_ytd_with_same_end_date_are_not_compared"
+    },
+    {
+      "id": "HFC-031",
+      "family": "Spreadsheet",
+      "title": "Non-self reconciliation",
+      "requirement": "Require distinct observations for a cross-source reconciliation.",
+      "failure_behavior": "A same-cell self-comparison cannot establish independent agreement.",
+      "implementation": "reference",
+      "verification": "tests/test_excel_reconciliation.py:test_self_comparison_and_duplicate_ids_refused"
+    },
+    {
+      "id": "HFC-032",
+      "family": "Business rules",
+      "title": "Rule applicability and version",
+      "requirement": "Record the authoritative rule, jurisdiction, effective period and applicable population before applying a business threshold.",
+      "failure_behavior": "An unsupported rule remains unverified, not a regulatory failure.",
+      "implementation": "host",
+      "verification": null
+    },
+    {
+      "id": "HFC-033",
+      "family": "Business rules",
+      "title": "Loaded context is not execution",
+      "requirement": "Distinguish retrieved rules and memories from executed checks.",
+      "failure_behavior": "A loaded note cannot count as a passed rule.",
+      "implementation": "reference",
+      "verification": "tests/test_financial_workbook.py:test_all_variances_kept_and_context_is_not_execution_proof"
+    },
+    {
+      "id": "HFC-034",
+      "family": "AI review",
+      "title": "Label semantic judgement",
+      "requirement": "Record model/provider/version, observed evidence, uncertainty and the semantic nature of each model assessment.",
+      "failure_behavior": "Unlabelled model opinion cannot count as a deterministic finding.",
+      "implementation": "host",
+      "verification": null
+    },
+    {
+      "id": "HFC-035",
+      "family": "Decision",
+      "title": "Mandatory escalation",
+      "requirement": "Request human review when the trusted policy requires it.",
+      "failure_behavior": "Missing escalation is FAIL and human review remains required.",
+      "implementation": "reference",
+      "verification": "tests/test_review_regressions.py:test_missing_escalation_is_blocking_but_still_requires_human"
+    },
+    {
+      "id": "HFC-036",
+      "family": "Decision",
+      "title": "Failure survives approval",
+      "requirement": "Preserve blocking deterministic failure when a reviewer or agent attempts to approve it.",
+      "failure_behavior": "A failed run cannot be signed off as successful.",
+      "implementation": "reference",
+      "verification": "tests/test_engine.py:test_failure_cannot_be_signed_off"
+    },
+    {
+      "id": "HFC-037",
+      "family": "Decision",
+      "title": "Authenticated accountable reviewer",
+      "requirement": "Authenticate the named reviewer and bind their action to the current scope and report.",
+      "failure_behavior": "A string containing a person name does not prove consent.",
+      "implementation": "host",
+      "verification": null
+    },
+    {
+      "id": "HFC-038",
+      "family": "Evidence",
+      "title": "Complete denominator and restart",
+      "requirement": "Retain all planned controls and earlier outcomes across interruption and resume.",
+      "failure_behavior": "NOT_RUN and prior failures remain visible.",
+      "implementation": "reference",
+      "verification": "tests/test_engine.py:test_resume_preserves_results_and_denominator_across_restart"
+    },
+    {
+      "id": "HFC-039",
+      "family": "Evidence",
+      "title": "Correction lineage",
+      "requirement": "Preserve the original failure, register a successor and keep human review pending.",
+      "failure_behavior": "Correction must not overwrite the earlier report.",
+      "implementation": "reference",
+      "verification": "tests/test_demo.py:test_walkthrough_preserves_failure_and_never_approves"
+    },
+    {
+      "id": "HFC-040",
+      "family": "Evidence",
+      "title": "Independent closure evidence",
+      "requirement": "Require a distinct challenge run and immutable closure record; authenticate independence in the host.",
+      "failure_behavior": "A repeated run is not proof of independent professional expertise.",
+      "implementation": "reference",
+      "verification": "tests/test_engine.py:test_human_closure_requires_separate_run_and_is_immutable"
+    }
+  ]
+}

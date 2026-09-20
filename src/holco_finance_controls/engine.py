@@ -5,7 +5,7 @@ import hashlib
 import json
 import sqlite3
 import uuid
-from functools import wraps
+from functools import wraps, lru_cache
 from threading import RLock
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,6 +19,19 @@ def canonical(value):
 
 def digest(data):
     return hashlib.sha256(data).hexdigest()
+
+
+@lru_cache(maxsize=1)
+def implementation_source_hash():
+    """Cache immutable source identity, not a caller-mutable manifest."""
+    root = Path(__file__).resolve().parent
+    files = {p.relative_to(root).as_posix(): digest(p.read_bytes()) for p in sorted(root.rglob("*.py"))}
+    return digest(canonical(files).encode())
+
+
+def implementation_manifest():
+    """Identity of installed Python sources, not an attestation of their trustworthiness."""
+    return dict(version=VERSION, source_sha256=implementation_source_hash())
 
 
 def now():
@@ -166,7 +179,7 @@ class Engine:
             snapshot, _ = parse_snapshot(self._source(source_ids[0])[1])
             if any(not policy.get(k) for k in ("objective", "required_period", "required_scope")):
                 raise ValueError("snapshot requires objective, period and scope before planning")
-        body = dict(protocol_version=VERSION, pack=pack, tolerance=str(tol), policy=policy,
+        body = dict(protocol_version=VERSION, implementation=implementation_manifest(), pack=pack, tolerance=str(tol), policy=policy,
                     sources=[dict(source_id=s, sha256=self._source(s)[0]) for s in source_ids],
                     controls=list(CATALOG[pack]), control_exclusions=exclusions,
                     created_at=now(), supersedes=supersedes,
@@ -211,6 +224,8 @@ class Engine:
         body = json.loads(row[1])
         if body["protocol_version"] != VERSION:
             raise ValueError("runner version changed; create a new plan")
+        if body.get("implementation") != implementation_manifest():
+            raise ValueError("runner implementation changed; use the original build or create a new plan")
         for source in body["sources"]:
             if self._source(source["source_id"])[0] != source["sha256"]:
                 raise ValueError("source differs from plan")
@@ -265,14 +280,14 @@ class Engine:
                     # authored exclusion attached, never silently absent.
                     item = result(code, dict(excluded_by_plan=excluded),
                                   "control executed by the universal layer", "NOT_RUN",
-                                  reason="excluded_by_plan")
+                                  reason_code="EXCLUDED_BY_PLAN")
                 elif plan["pack"] == "erp_agent_response" and code == "source_provenance":
                     receipt = self.db.execute("SELECT raw_source FROM receipts WHERE source=?", (plan["sources"][0]["source_id"],)).fetchone()
                     sha_raw = self._source(receipt[0])[0] if receipt else None
                     item = result(code, dict(connector_receipt_present=bool(receipt), raw_response_sha256=sha_raw),
                                   "source captured by trusted adapter outside model",
                                   "PASS" if receipt else "INCONCLUSIVE",
-                                  reason=None if receipt else "missing_evidence")
+                                  reason_code=None if receipt else "MISSING_EVIDENCE")
                 else:
                     item = execute(plan["pack"], code, data, plan["tolerance"], plan["policy"])
                 item["evidence"] = plan["sources"]
@@ -297,9 +312,9 @@ class Engine:
         counts = {s: statuses.count(s) for s in ("PASS", "FAIL", "REVIEW", "INCONCLUSIVE", "NOT_RUN")}
         counts["NOT_RUN"] += not_run
         technical = aggregate(statuses + ["NOT_RUN"] * not_run)
-        not_run_reasons = ([dict(control_id=r["control_id"], reason=r.get("reason", "not_executed"))
+        not_run_reasons = ([dict(control_id=r["control_id"], reason_code=r.get("reason_code", "NOT_EXECUTED"))
                             for r in run["results"] if r["status"] == "NOT_RUN"] +
-                           [dict(control_id=c, reason="not_executed")
+                           [dict(control_id=c, reason_code="NOT_EXECUTED")
                             for c in plan["controls"][len(statuses):]])
         return dict(**run, report_schema="holco.control-run/v2", plan=plan, not_run_reasons=not_run_reasons,
                     planned=len(plan["controls"]), executed=len(statuses), complete=not_run == 0,

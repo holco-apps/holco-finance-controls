@@ -6,6 +6,7 @@ from typing import Any
 from pathlib import Path
 
 from .engine import Engine
+from .contracts import input_contracts
 from .packs import CATALOG, MAX_BYTES, VERSION
 
 
@@ -16,13 +17,12 @@ def build_server(engine):
     @server.tool()
     def list_control_protocols() -> dict[str, Any]:
         """Describe supported control packs, input contracts and limits."""
+        contracts = input_contracts()
         return dict(version=VERSION, packs=CATALOG, max_input_bytes=MAX_BYTES,
-                    formats={"reconciliation_csv": "UTF-8 CSV: id,expected,observed",
-                             "excel_snapshot": "JSON observed sheet: workbook,sheet,scope,captured_at,cells[{address,value,formula,error}],checks[{id,target,terms[{address,coefficient}]}]. Plan policy objective,required_period,required_scope required. See MCP.md.",
-                             "fec_tsv": "UTF-8 TSV: JournalCode,EcritureNum,EcritureDate,Debit,Credit",
-                             "workbook_xlsx": "base64 OOXML XLSX; cached values, no formula execution",
-                             "workbook_comparison": "two XLSX snapshots; tolerance in stored units",
-                             "erp_agent_response": "ERP snapshot JSON then agent claims JSON; explicit tool policy"})
+                    formats={name: "; ".join(source["format"] for source in contract["sources"])
+                             for name, contract in contracts.items()},
+                    input_contracts=contracts)
+
 
     @server.tool()
     def register_control_source(content: str, encoding: str = "utf8") -> dict[str, Any]:

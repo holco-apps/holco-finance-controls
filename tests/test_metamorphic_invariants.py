@@ -124,7 +124,7 @@ class FecInvariants(unittest.TestCase):
                 break
         report = execute("fec_tsv", "entry_balance", [fec_bytes(rows)], "0.01")
         self.assertEqual(report["status"], "FAIL")
-        self.assertEqual(report["observed"], 1)
+        self.assertEqual(report["observed"]["unbalanced_entries"], 1)
 
     def test_permutation_invariance(self):
         rows = balanced_entries(self.rng)

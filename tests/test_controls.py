@@ -37,11 +37,11 @@ class ControlTests(unittest.TestCase):
         )
         self.assertEqual(result.outcome, Outcome.REVIEW)
 
-    def test_missing_escalation_is_reviewed(self) -> None:
+    def test_missing_escalation_fails(self) -> None:
         result = control_case(
             make_case(requires_human_approval=True, agent_requested_review=False)
         )
-        self.assertEqual(result.outcome, Outcome.REVIEW)
+        self.assertEqual(result.outcome, Outcome.FAIL)
         escalation = next(
             check for check in result.checks if check.name == "accountable_decision_escalated"
         )

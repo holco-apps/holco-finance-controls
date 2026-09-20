@@ -1,0 +1,80 @@
+{
+  "schema": "holco.golden-domain/1",
+  "domain": "fec",
+  "synthetic": true,
+  "scope": "Bounded arithmetic and observation contracts, not professional domain validation.",
+  "cases": [
+    {
+      "case_id": "fec-balanced",
+      "pack": "fec_tsv",
+      "control_id": "entry_balance",
+      "sources": [
+        "JournalCode\tEcritureNum\tEcritureDate\tDebit\tCredit\nAC\t1\t20260102\t100\t0\nAC\t1\t20260102\t0\t100\n"
+      ],
+      "tolerance": "0.01",
+      "policy": {},
+      "expected_status": "PASS",
+      "oracle": "Debit and credit for entry 1 are both 100."
+    },
+    {
+      "case_id": "fec-unbalanced",
+      "pack": "fec_tsv",
+      "control_id": "entry_balance",
+      "sources": [
+        "JournalCode\tEcritureNum\tEcritureDate\tDebit\tCredit\nAC\t1\t20260102\t100\t0\nAC\t1\t20260102\t0\t90\n"
+      ],
+      "tolerance": "0.01",
+      "policy": {},
+      "expected_status": "FAIL",
+      "oracle": "Entry 1 differs by 10."
+    },
+    {
+      "case_id": "fec-negative",
+      "pack": "fec_tsv",
+      "control_id": "amounts",
+      "sources": [
+        "JournalCode\tEcritureNum\tEcritureDate\tDebit\tCredit\nAC\t1\t20260102\t-100\t0\n"
+      ],
+      "tolerance": "0.01",
+      "policy": {},
+      "expected_status": "FAIL",
+      "oracle": "Negative debit violates the supported row contract."
+    },
+    {
+      "case_id": "fec-dual-sided",
+      "pack": "fec_tsv",
+      "control_id": "amounts",
+      "sources": [
+        "JournalCode\tEcritureNum\tEcritureDate\tDebit\tCredit\nAC\t1\t20260102\t100\t100\n"
+      ],
+      "tolerance": "0.01",
+      "policy": {},
+      "expected_status": "FAIL",
+      "oracle": "Both sides nonzero violate the row contract, despite balance."
+    },
+    {
+      "case_id": "fec-date",
+      "pack": "fec_tsv",
+      "control_id": "dates",
+      "sources": [
+        "JournalCode\tEcritureNum\tEcritureDate\tDebit\tCredit\nAC\t1\t20260230\t100\t0\n"
+      ],
+      "tolerance": "0.01",
+      "policy": {},
+      "expected_status": "FAIL",
+      "oracle": "February 30 is not a calendar date."
+    },
+    {
+      "case_id": "fec-valid-rows",
+      "pack": "fec_tsv",
+      "control_id": "amounts",
+      "sources": [
+        "JournalCode\tEcritureNum\tEcritureDate\tDebit\tCredit\nAC\t1\t20260102\t100\t0\n"
+      ],
+      "tolerance": "0.01",
+      "policy": {},
+      "expected_status": "PASS",
+      "oracle": "Valid amounts do not imply the entry balances."
+    }
+  ]
+}

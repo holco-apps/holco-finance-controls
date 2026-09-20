@@ -1,6 +1,11 @@
 # HOLCO Financial Control Protocol
 
-Version 1.2 (implementation 0.3.0, additive cross-sheet pack)
+Version **1.3.0** · experimental specification · reference implementation **0.6.0**
+
+Normative terms: MUST / MUST NOT are requirements; SHOULD permits a documented
+exception. Protocol, implementation and conformance profiles have separate versions.
+A profile result only establishes the requirements explicitly covered by that profile.
+[40 requirements and implementation coverage](CONTROL_CATALOG.md) · [Conformance](CONFORMANCE.md)
 
 > Deterministic when possible. AI when necessary. Human when accountable.
 
@@ -63,8 +68,10 @@ stateDiagram-v2
   RECEIVED --> INVENTORIED: intake complete
   INVENTORIED --> NEEDS_INPUT: evidence or scope missing
   NEEDS_INPUT --> INVENTORIED: new input and new hash
-  INVENTORIED --> PLANNED: plan proposed
-  PLANNED --> RUNNING: plan approved
+  INVENTORIED --> UNDERSTOOD: interpretation and uncertainty proposed
+  UNDERSTOOD --> PLANNED: adapted analysis proposed
+  PLANNED --> CONFIRMED: human confirms meaning and expected result
+  CONFIRMED --> RUNNING: exact plan and confirmation match
   RUNNING --> INTERRUPTED: bounded stop
   INTERRUPTED --> RUNNING: checkpoint and hashes match
   RUNNING --> CHALLENGE: primary controls complete
@@ -99,6 +106,19 @@ Before interpreting the content, create a manifest containing:
 
 Source files remain untouched. Temporary copies are stored outside the source
 location and never replace it.
+
+### Gate B2: understanding before analysis
+
+The controller MUST propose the document type, expected result and appropriate
+analysis using the filename and content evidence. Sampling, unreadable components
+and contradictory clues MUST be visible. The filename alone cannot establish
+business meaning. A generic spreadsheet MUST NOT automatically become a P&L.
+
+The human MUST explicitly confirm the interpretation, intended result and analysis
+scope before material controls run. Read-only inventory and proposal preparation
+may precede this confirmation. A correction creates a new proposal and invalidates
+the previous confirmation. Record actor, time, proposal digest and plan digest.
+Understanding is a hypothesis; confirmation is not a financial correctness verdict.
 
 ### Gate C: approved control plan
 
@@ -371,6 +391,15 @@ deployment require separately implemented and validated integrations.
 `Engine.sign_off` is a trusted local operator API, not an MCP capability.
 No LLM judgement service is called by the engine.
 
+Implementation 0.4 adds strict decimal verdicts, conservative comparison coverage
+and a source-code manifest. Implementation 0.6 adds the default-deny universal
+control layer with typed, authored exclusions surfacing as `NOT_RUN`, the
+mandatory machine-readable `reason_code` on every `INCONCLUSIVE` or `NOT_RUN`
+result, and the `aggregate_amounts` control against sub-tolerance splitting.
+This does not expand conformance to the unimplemented
+independent/semantic review gates above. See [CHANGELOG](CHANGELOG.md) and the
+[architecture boundaries](ARCHITECTURE.md).
+
 ## 13. Non-goals
 
 These are deliberate design refusals, not missing features. A change that
@@ -378,7 +407,8 @@ introduces one of them is a protocol violation, not an improvement.
 
 - **No single global reliability score.** The five distinct outcomes are the
   interface. Collapsing them into one number hides failure modes and invites
-  false assurance.
+  false assurance. Transparent per-state, per-family aggregates remain
+  legitimate reporting.
 - **No language model verifying arithmetic.** Amounts, balances and
   reconciliations are verified by deterministic code and metamorphic tests.
   A model judging arithmetic adds documented biases without adding proof.
@@ -394,3 +424,22 @@ introduces one of them is a protocol violation, not an improvement.
   always reach a human.
 - **No override of a blocking deterministic failure**, by any model, score or
   reviewer convenience path. This already holds and must keep holding.
+
+## 14. Specification evolution and adoption
+
+1.3.0 adds explicit document understanding and human confirmation before execution,
+a stable 40-requirement catalogue, and the bounded golden-verdict/1 profile. It does
+not make the public reference package a document-understanding service. Its host
+requirements are labelled separately in the catalogue.
+
+Requirement IDs are stable. Clarifications keep the ID; incompatible semantics
+require a new major protocol version or a new ID with an explicit deprecation.
+Never reuse a withdrawn ID. A proposal needs a counterexample, source evidence,
+expected failure behaviour, scope and a synthetic regression before acceptance.
+Maintainers review changes through public pull requests and release notes.
+
+An implementation report MUST state protocol/profile version, implementation
+revision, tested case IDs, coverage, exceptions and reproducible commands. No
+unqualified “HOLCO certified” claim follows from self-testing. Adoption is measured
+through independent implementations, counterexamples and repeated integrations;
+stars are a discovery signal, not evidence of control effectiveness.

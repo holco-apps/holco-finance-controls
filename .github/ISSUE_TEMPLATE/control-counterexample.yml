@@ -1,0 +1,29 @@
+name: Control counterexample
+description: Challenge a requirement using publishable, reproducible evidence.
+title: "[Counterexample] HFC-"
+body:
+  - type: input
+    id: control
+    attributes:
+      label: Requirement ID and protocol/profile version
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Synthetic input and exact reproduction command
+      description: Never include secrets, client files, private endpoints or production traces.
+    validations:
+      required: true
+  - type: textarea
+    id: oracle
+    attributes:
+      label: Expected result and independent reasoning
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result, implementation revision and scope
+    validations:
+      required: true

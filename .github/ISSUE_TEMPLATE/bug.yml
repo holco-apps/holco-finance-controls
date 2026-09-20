@@ -1,0 +1,31 @@
+name: Reproducible bug
+description: Report an installation, execution or documentation problem.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: For vulnerabilities or data exposure, use SECURITY.md. Never attach client data or credentials.
+  - type: input
+    id: version
+    attributes:
+      label: Version, Python version and operating system
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Exact command and minimal synthetic reproduction
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour and redacted output
+    validations:
+      required: true

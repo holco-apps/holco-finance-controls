@@ -74,6 +74,14 @@ def parse_reconciliation(sources):
     return left, lc, right, rc, comparisons
 
 
+def observed_number(cell):
+    """Missing error observation is not evidence that the cell has no error."""
+    from .packs import number
+    if "error" not in cell or cell["error"] is not None or type(cell.get("value")) not in (int, float):
+        raise ValueError("missing numeric observation")
+    return number(str(cell["value"]))
+
+
 def reconciliation_control(code, sources, tolerance):
     from .packs import number, result
     left, lc, right, rc, comparisons = parse_reconciliation(sources)
@@ -89,9 +97,7 @@ def reconciliation_control(code, sources, tolerance):
             values = []
             for cells, key in ((lc, "left"), (rc, "right")):
                 cell = cells[item[key]]
-                if "error" not in cell or cell["error"] is not None or type(cell["value"]) not in (int, float):
-                    raise ValueError("missing numeric observation")
-                values.append(number(str(cell["value"])))
+                values.append(observed_number(cell))
             with localcontext() as ctx:
                 ctx.prec = 160
                 delta = values[0] - values[1]
@@ -102,7 +108,7 @@ def reconciliation_control(code, sources, tolerance):
     statuses = [f["status"] for f in findings]
     status = "FAIL" if "FAIL" in statuses else "INCONCLUSIVE" if not statuses or "INCONCLUSIVE" in statuses else "PASS"
     return result(code, dict(checks=findings), "mapped amounts agree within approved tolerance; differences are not automatically rounding", status,
-                  reason="missing_evidence" if status == "INCONCLUSIVE" else None)
+                  reason_code="MISSING_EVIDENCE" if status == "INCONCLUSIVE" else None)
 
 
 def snapshot_control(code, raw, tolerance):
@@ -118,7 +124,7 @@ def snapshot_control(code, raw, tolerance):
         return result(code, dict(addresses=errors[:100], count=len(errors), missing_error_type=missing),
                       "no typed Excel errors in submitted cells",
                       "FAIL" if errors else "INCONCLUSIVE" if missing else "PASS",
-                      reason="missing_evidence" if not errors and missing else None)
+                      reason_code="MISSING_EVIDENCE" if not errors and missing else None)
     if code == "formula_references":
         # Ignore string literals: ="#REF!" is not a broken reference.
         broken = [a for a, c in cells.items() if re.search(r"#REF!", re.sub(r'"(?:[^"]|"")*"', '', c.get("formula") or ""), re.I)]
@@ -126,7 +132,7 @@ def snapshot_control(code, raw, tolerance):
         return result(code, dict(addresses=broken[:100], count=len(broken), missing_formula_view=missing),
                       "no explicit #REF! outside string literals; no formula execution",
                       "FAIL" if broken else "INCONCLUSIVE" if missing else "PASS",
-                      reason="missing_evidence" if not broken and missing else None)
+                      reason_code="MISSING_EVIDENCE" if not broken and missing else None)
     if code == "declared_equations":
         findings = []
         for check in data.get("checks", []):
@@ -135,9 +141,7 @@ def snapshot_control(code, raw, tolerance):
                 values = {}
                 for address in addresses:
                     cell = cells[address]
-                    if cell.get("error") or type(cell["value"]) not in (int, float):
-                        raise ValueError("missing numeric observation")
-                    values[address] = number(str(cell["value"]))
+                    values[address] = observed_number(cell)
                 with localcontext() as ctx:
                     ctx.prec = 160
                     expected = sum((values[t["address"]] * number(t.get("coefficient", "1")) for t in check["terms"]), Decimal(0))
@@ -150,5 +154,5 @@ def snapshot_control(code, raw, tolerance):
         statuses = [f["status"] for f in findings]
         status = "FAIL" if "FAIL" in statuses else "INCONCLUSIVE" if not statuses or "INCONCLUSIVE" in statuses else "PASS"
         return result(code, dict(checks=findings), "target equals declared weighted sum within approved tolerance; rule suitability requires review", status,
-                      reason="missing_evidence" if status == "INCONCLUSIVE" else None)
+                      reason_code="MISSING_EVIDENCE" if status == "INCONCLUSIVE" else None)
     raise ValueError("unknown snapshot control")
