@@ -1,7 +1,7 @@
 # HOLCO Finance Controls
 
 A small, reproducible control framework for verifying that financial AI agents
-follow the numbers, sources and business rules — not just that they sound right.
+follow the numbers, sources and business rules, not just that they sound right.
 
 > Deterministic when possible. AI when necessary. Human when accountable.
 
@@ -147,6 +147,20 @@ executed are counted as `NOT_RUN`, never as passes.
 The Golden Set CLI is stateless: resuming recomputes the earlier prefix to
 retain its outcomes. Use the persistent engine/MCP for checkpointed file and
 ERP workflows without recomputing prior controls.
+
+## Doctrine and measurement
+
+[`DOCTRINE.md`](DOCTRINE.md) maps each mechanism to the professional and
+regulatory doctrine it serves (SR 11-7, NEP 240/500, EU AI Act art. 50,
+ISO/IEC 42001, NIST AI RMF, OWASP LLM01, FEC / art. A.47 A-1 LPF), with the
+verification status of every external reference stated.
+[`docs/MEASUREMENT.md`](docs/MEASUREMENT.md) defines how these controls
+become an evidenced claim: per-family precision and recall on a labelled
+truth set, seeded-anomaly recall, evidence coverage, silence tests, and the
+metamorphic invariants executed by
+[`tests/test_metamorphic_invariants.py`](tests/test_metamorphic_invariants.py).
+Repeating the same code proves repeatability; these two documents define the
+path to proving validity.
 
 ## Control protocol
 

@@ -360,3 +360,27 @@ coverage, authoritative spreadsheet recalculation and multi-tenant remote
 deployment require separately implemented and validated integrations.
 `Engine.sign_off` is a trusted local operator API, not an MCP capability.
 No LLM judgement service is called by the engine.
+
+## 13. Non-goals
+
+These are deliberate design refusals, not missing features. A change that
+introduces one of them is a protocol violation, not an improvement.
+
+- **No single global reliability score.** The five distinct outcomes are the
+  interface. Collapsing them into one number hides failure modes and invites
+  false assurance.
+- **No language model verifying arithmetic.** Amounts, balances and
+  reconciliations are verified by deterministic code and metamorphic tests.
+  A model judging arithmetic adds documented biases without adding proof.
+- **No judge from the same model as the candidate.** If a probabilistic
+  review is ever attached, the judging model must differ from the model that
+  produced the answer under control (self-preference bias is documented).
+- **No blockchain and no full software supply-chain attestation stack.**
+  SHA-256 binding, append-only local records and, where needed, qualified
+  timestamps are proportionate for accounting control; distributed ledgers
+  are not.
+- **No automatic professional sign-off.** Statistical and anomaly signals are
+  framed as `REVIEW`, never as automatic `FAIL`, and accountable decisions
+  always reach a human.
+- **No override of a blocking deterministic failure**, by any model, score or
+  reviewer convenience path. This already holds and must keep holding.
