@@ -1,0 +1,14 @@
+{
+  "name": "holco-finance-controls",
+  "displayName": "HOLCO Finance Controls",
+  "version": "0.6.0",
+  "description": "Check financial AI outputs with an open control protocol. Use these skills when a user wants to verify an AI-produced financial figure or statement against declared sources, run the local conformance demo (Python 3.11+, no API key, no network), or integrate the deterministic controls engine into an application or CI. The engine plans explicit controls, executes them, retains tamper-evident evidence, and always leaves the accountable decision with a human: a deterministic PASS is never a professional validation.",
+  "author": {
+    "name": "HOLCO",
+    "url": "https://holco.co"
+  },
+  "homepage": "https://holco.co/evaluation-ia-finance/",
+  "repository": "https://github.com/holco-apps/holco-finance-controls",
+  "license": "MIT",
+  "keywords": ["finance", "accounting", "controls", "evidence", "verification", "audit"]
+}
