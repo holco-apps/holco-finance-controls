@@ -124,5 +124,45 @@ class AggregateDrift(unittest.TestCase):
         self.assertIn("aggregate_amounts", CATALOG["reconciliation_csv"])
 
 
+
+
+class PlanMutationInvariants(unittest.TestCase):
+    def test_tolerance_and_exclusion_never_remove_mandatory_controls(self):
+        engine = Engine(Path(":memory:"))
+        try:
+            source = engine.register(FEC)
+            for tolerance in ("0", "0.01", "1000"):
+                for exclusions in ([], [{"control_id": "duplicates", "reason": "synthetic scope", "author": "reviewer"}]):
+                    with self.subTest(tolerance=tolerance, exclusions=exclusions):
+                        plan = engine.plan([source["source_id"]], "fec_tsv", tolerance,
+                                           control_exclusions=exclusions)
+                        self.assertEqual(plan["controls"], list(CATALOG["fec_tsv"]))
+                        run = engine.start(plan["plan_id"], plan["plan_sha256"])
+                        report = engine.advance(run["run_id"], 8)
+                        self.assertEqual(report["planned"], len(CATALOG["fec_tsv"]))
+                        if exclusions:
+                            self.assertEqual(report["deterministic_outcome"], "INCONCLUSIVE")
+                            self.assertEqual(report["counts"]["NOT_RUN"], 1)
+                        else:
+                            self.assertEqual(report["deterministic_outcome"], "PASS")
+        finally:
+            engine.close()
+
+    def test_exclusion_cannot_hide_independent_blocking_failure(self):
+        engine = Engine(Path(":memory:"))
+        try:
+            broken = FEC.replace(b"0.00\t100.00", b"0.00\t90.00")
+            for raw in (broken, b"\n".join([broken.splitlines()[0], *reversed(broken.splitlines()[1:])])+b"\n"):
+                source = engine.register(raw)
+                for exclusions in ([], [{"control_id": "duplicates", "reason": "synthetic scope", "author": "reviewer"}]):
+                    plan = engine.plan([source["source_id"]], "fec_tsv", control_exclusions=exclusions)
+                    run = engine.start(plan["plan_id"], plan["plan_sha256"])
+                    report = engine.advance(run["run_id"], 8)
+                    self.assertEqual(report["deterministic_outcome"], "FAIL")
+                    self.assertEqual(next(r for r in report["results"] if r["control_id"] == "entry_balance")["status"], "FAIL")
+        finally:
+            engine.close()
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,7 +1,7 @@
 {
   "schema": "holco.protocol-release/1",
   "protocol_version": "1.3.0",
-  "reference_version": "0.7.0",
+  "reference_version": "0.7.1",
   "status": "experimental",
   "documents": {
     "CONTROL_PROTOCOL.md": "0f9dbfba916e384d8934b77b2c4eb71bade4a73633221b48bfc788fefa62d5db",

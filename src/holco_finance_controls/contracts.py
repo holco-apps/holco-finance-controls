@@ -22,7 +22,9 @@ def input_contracts():
         'workbook_xlsx': contract([source('workbook', XLSX)]),
         'workbook_comparison': contract([source('before', XLSX), source('after', XLSX)],
             optional_policy=dict(evidence_cap='integer 1..10000; how many divergent and uncomparable cells are located inline, default 100. Counts are never capped.')),
-        'excel_snapshot': contract([source('observed_sheet', SNAPSHOT)], snapshot_policy),
+        'excel_snapshot': contract([source('observed_sheet', SNAPSHOT)],
+            {**snapshot_policy, 'required_scope': 'exactly snapshot.scope, one A1 rectangle without a sheet prefix'},
+            constraints='At most 40000 cells in the rectangle and 10000 observations; observations must lie inside it and cover at least one quarter. Local formula cycles are checked without evaluation; qualified/structured references, ranges, dynamic references and named expressions remain unresolved.'),
         'excel_reconciliation': contract([
             source('left', dict(**SNAPSHOT, comparisons='Required for meaningful checks: [{id,left:"A1",right:"B1"}]; stored in this left snapshot. Maximum 500.')),
             source('right', SNAPSHOT)], snapshot_policy, constraints='Two distinct source IDs; no same-workbook same-sheet same-address self comparison.'),

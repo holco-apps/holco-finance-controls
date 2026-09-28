@@ -40,3 +40,31 @@ the model level; the defence is structural (separation of data and
 instructions, least privilege, read-only access, bounded outputs). This
 framework implements the structural part for the control path. Host
 applications embedding a model remain responsible for their own surface.
+
+
+## Text presented to a human reviewer
+
+An imported label, explanation, rule or reference name is an unverified claim.
+It can mislead a human even when it contains no executable markup. Render source
+text separately from engine findings and authenticated reviewer decisions; show
+its locator and origin, and never treat “approved” inside a document as approval.
+Escape HTML/Markdown appropriately in the host renderer and disable active links
+or embedded content unless explicitly allowed. Escaping prevents executable
+markup; it does not establish semantic truth or reviewer independence.
+
+## Snapshot validity and adapter trust
+
+A result concerns the exact registered bytes, not the current state of an ERP.
+A later posting, reused source identifier or provider-side mutation is outside
+that snapshot. The trusted adapter must validate normalization, pagination,
+identifier scope and provider version semantics. Hash equality proves byte
+identity, not that the adapter captured the right population or a recent state.
+
+Excel reports retain declared `captured_at` in `plan.snapshot_scope` or
+`plan.comparison_scopes`. That value is supplied by the caller, not an independently
+attested capture time. Plan creation time is not extraction time. The generic ERP
+capture API does not currently enforce freshness or verify a capture timestamp.
+Hosts needing freshness must record independently sourced extraction metadata,
+define their own validity window and obtain a new source/plan when required.
+Keep the SHA-256 of the raw bytes separate from time metadata; never relabel an
+old report as a control of current data or silently rewrite its approved plan.

@@ -238,3 +238,23 @@ an affirmative balance conclusion. Unreadable numeric data is inconclusive.
 A missed mandatory escalation is a blocking failure; an appropriately requested
 approval remains REVIEW. A failure does not erase the requirement for human review.
 This evaluates supplied agent-behaviour declarations, not authenticated approval.
+
+
+### Observed Excel scope and dependency limits (0.7.1)
+
+For `excel_snapshot`, `scope` is one bounded A1 rectangle (maximum 40,000 cells, with at most 10,000 observed cells),
+and `policy.required_scope` must match it exactly, without a sheet prefix.
+Cells outside the rectangle are rejected; a rectangle more than four times the
+number of observed cells is rejected. Omitted cells remain unobserved, never zero.
+`formula_dependencies` detects direct and circular dependencies among supported
+local formulas using a bounded iterative traversal. Sheet-qualified, external
+structured references, ranges, dynamic references and named expressions are unresolved and yield `INCONCLUSIVE` in the absence
+of a proven local cycle; a proven local cycle remains `FAIL`. This does not
+implement general cross-sheet resolution, formula recalculation or an Excel AST.
+Declared capture times describe the input claim only; see [snapshot validity](SECURITY.md#snapshot-validity-and-adapter-trust).
+
+The local dependency recognizer accepts scalar A1 references and a limited function
+allowlist (`SUM`, `MIN`, `MAX`, `ABS`, `ROUND`, `ROUNDUP`, `ROUNDDOWN`, `IF`,
+`IFERROR`, `COUNT`, `COUNTA`, `AVERAGE`, `LOG10`, `SQRT`, `AND`, `OR`, `NOT`).
+Other function calls and references to unobserved cells make the result inconclusive
+unless another supported expression proves a cycle. No function is evaluated.

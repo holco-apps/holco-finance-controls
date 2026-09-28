@@ -10,6 +10,10 @@ et des cas synthétiques. Il s'adresse aux développeurs d'agents et d'applicati
 financières. Le service de production, les connecteurs réels et les dossiers clients
 restent privés. Les spécifications et contrats détaillés sont en anglais.
 
+Version de référence **0.7.1** : périmètre Excel borné, cycles locaux détectés,
+références non résolues explicitement non conclusives. Le [suivi des revues](docs/REVIEW-FOLLOWUP.md)
+distingue les correctifs vérifiés de la calibration métier encore ouverte.
+
 ## Essayer sans connexion ni clé API
 
 Python 3.11 ou plus récent suffit :

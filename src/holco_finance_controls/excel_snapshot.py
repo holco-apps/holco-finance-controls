@@ -5,6 +5,124 @@ from decimal import Decimal, localcontext
 
 ADDRESS = re.compile(r"[A-Z]{1,3}[1-9][0-9]{0,6}\Z")
 
+SCOPE = re.compile(r"([A-Z]{1,3})([1-9][0-9]{0,6}):([A-Z]{1,3})([1-9][0-9]{0,6})\Z")
+REFERENCE = re.compile(r"(?<![A-Z0-9_])\$?([A-Z]{1,3})\$?([1-9][0-9]{0,6})(?![A-Z0-9_])")
+
+
+def formula_references(formula):
+    """Return A1 references in one observed-sheet formula without evaluating it.
+
+    This deliberately recognises only local A1 references.  Cross-sheet and
+    structured references stay outside this snapshot control's asserted scope.
+    """
+    expression = re.sub(r'"(?:[^"]|"")*"', '', (formula or "").upper())
+    return {column.replace("$", "") + row for column, row in REFERENCE.findall(expression)}
+
+
+def column_number(column):
+    value = 0
+    for character in column:
+        value = value * 26 + ord(character) - 64
+    return value
+
+
+def scope_addresses(scope):
+    match = SCOPE.fullmatch(scope)
+    if not match:
+        raise ValueError("snapshot scope must be one A1 range")
+    start_column, start_row, end_column, end_row = match.groups()
+    start_column, end_column = column_number(start_column), column_number(end_column)
+    start_row, end_row = int(start_row), int(end_row)
+    if start_column > end_column or start_row > end_row:
+        raise ValueError("invalid snapshot scope")
+    if (end_column - start_column + 1) * (end_row - start_row + 1) > 40_000:
+        raise ValueError("snapshot scope too large")
+    expected = set()
+    for column in range(start_column, end_column + 1):
+        text = ""
+        value = column
+        while value:
+            value, remainder = divmod(value - 1, 26)
+            text = chr(65 + remainder) + text
+        expected.update(text + str(row) for row in range(start_row, end_row + 1))
+    return expected
+
+
+def dependency_findings(cells):
+    # The local A1 graph cannot resolve sheet-qualified or structured references.
+    # Exclude the whole expression rather than confusing another sheet's A1 with
+    # this sheet's A1. An excluded formula is unknown, never proof of no cycle.
+    unsupported = []
+    formulas = {}
+    for address, cell in cells.items():
+        formula = cell.get("formula")
+        if formula is None:
+            continue
+        expression = re.sub(r'"(?:[^"]|"")*"', '', formula)
+        expression = re.sub(r"#REF!", "", expression, flags=re.I)
+        expression = expression.upper()
+        # Functions with dynamic references and ranges need a richer parser.
+        # Function names (e.g. LOG10) must not be mistaken for cell addresses.
+        calls = re.findall(r"([A-Z_][A-Z0-9_.]*)\s*\(", expression)
+        simple = re.sub(r"[A-Z_][A-Z0-9_.]*\s*(?=\()", "", expression)
+        remainder = REFERENCE.sub("", simple)
+        if (any(token in expression for token in ("!", "[", ":"))
+                or any(name not in {"SUM", "MIN", "MAX", "ABS", "ROUND", "ROUNDUP",
+                                    "ROUNDDOWN", "IF", "IFERROR", "COUNT", "COUNTA",
+                                    "AVERAGE", "LOG10", "SQRT", "AND", "OR", "NOT"}
+                       for name in calls)
+                or re.search(r"[^0-9\s=+*/^%(),.<>\-]", remainder)):
+            unsupported.append(address)
+            continue
+        formulas[address] = formula_references(simple)
+    graph = {address: {ref for ref in refs if ref in formulas}
+             for address, refs in formulas.items()}
+    unresolved = sorted({ref for refs in formulas.values() for ref in refs if ref not in cells})
+    missing = sum("formula" not in cell for cell in cells.values())
+    direct = sorted(address for address, refs in formulas.items() if address in refs)
+    # Iterative Kosaraju traversal: every member of each cyclic component is
+    # reported, including vertices reached after a previous DFS branch finished.
+    visited, finished = set(), []
+    for root in graph:
+        if root in visited:
+            continue
+        visited.add(root)
+        frames = [(root, iter(sorted(graph[root])))]
+        while frames:
+            node, targets = frames[-1]
+            target = next(targets, None)
+            if target is None:
+                finished.append(node)
+                frames.pop()
+            elif target not in visited:
+                visited.add(target)
+                frames.append((target, iter(sorted(graph[target]))))
+    reverse = {node: set() for node in graph}
+    for node, targets in graph.items():
+        for target in targets:
+            reverse[target].add(node)
+    assigned, cycles = set(), set()
+    for root in reversed(finished):
+        if root in assigned:
+            continue
+        component, pending = set(), [root]
+        assigned.add(root)
+        while pending:
+            node = pending.pop()
+            component.add(node)
+            for target in reverse[node] - assigned:
+                assigned.add(target)
+                pending.append(target)
+        if len(component) > 1 or root in graph[root]:
+            cycles.update(component)
+    return dict(direct_self_references=direct[:100], circular_references=sorted(cycles)[:100],
+                direct_count=len(direct), circular_count=len(cycles), formula_cells=len(formulas),
+                missing_formula_view=missing,
+                unresolved_reference_count=len(unresolved),
+                unresolved_reference_addresses=unresolved[:100],
+                unsupported_formula_count=len(unsupported),
+                unsupported_formula_addresses=sorted(unsupported)[:100])
+
 
 def parse_snapshot(raw):
     from .packs import number
@@ -28,6 +146,10 @@ def parse_snapshot(raw):
             if cell.get(key) is not None and (not isinstance(cell[key], str) or len(cell[key]) > 8192):
                 raise ValueError("invalid cell observation")
         cells[address] = cell
+    if len(scope_addresses(data["scope"])) > len(cells) * 4:
+        raise ValueError("snapshot scope is broader than observed cells")
+    if set(cells) - scope_addresses(data["scope"]):
+        raise ValueError("observed cells outside snapshot scope")
     checks = data.get("checks", [])
     if not isinstance(checks, list) or len(checks) > 500:
         raise ValueError("check limit")
@@ -133,6 +255,16 @@ def snapshot_control(code, raw, tolerance):
                       "no explicit #REF! outside string literals; no formula execution",
                       "FAIL" if broken else "INCONCLUSIVE" if missing else "PASS",
                       reason_code="MISSING_EVIDENCE" if not broken and missing else None)
+    if code == "formula_dependencies":
+        observed = dependency_findings(cells)
+        has_cycle = observed["direct_count"] or observed["circular_count"]
+        incomplete = (observed["missing_formula_view"] or observed["unsupported_formula_count"]
+                      or observed["unresolved_reference_count"])
+        finding = result(code, observed,
+                         "no direct self-reference or circular dependency among supported observed local formulas; unsupported expressions excluded; no formula execution",
+                         "FAIL" if has_cycle else "INCONCLUSIVE" if incomplete else "PASS",
+                         reason_code="MISSING_EVIDENCE" if not has_cycle and incomplete else None)
+        return finding
     if code == "declared_equations":
         findings = []
         for check in data.get("checks", []):

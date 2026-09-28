@@ -91,7 +91,11 @@ verdict. Returning `PASS` everywhere fails the suite.
 
 ## What is implemented?
 
-**Reference 0.7.0 · Protocol 1.3.0 · Alpha · MIT.**
+**Reference 0.7.1 · Protocol 1.3.0 · Alpha · MIT.**
+
+New in 0.7.1: bounded Excel scope guards and local formula dependency checks;
+unsupported references stay inconclusive. [Review follow-up](docs/REVIEW-FOLLOWUP.md)
+records the verified fixes, evidence limits and work still open.
 
 New in 0.7.0: `numeric_stability` says **where**. It reported a count of cells
 above tolerance and no address, which a reviewer cannot act on and an auditor

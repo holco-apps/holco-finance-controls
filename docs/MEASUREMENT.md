@@ -11,7 +11,7 @@ truth set, with method and limits stated.
    reliability score. A global score hides failure modes and gives false
    assurance.
 2. The truth set is labelled by an accountable professional (each case marked
-   `PASS`, `REVIEW` or `FAIL` with a short justification), versioned, and
+   `PASS`, `REVIEW`, `FAIL`, `INCONCLUSIVE` or `NOT_RUN` with a short justification), versioned, and
    grown from real incidents.
 3. The method and its limits (sample size, domain, non-generalisability) are
    published together with the numbers.
@@ -36,11 +36,19 @@ For each control family:
 
 Operational quality of alerting, tracked internally per rule:
 
-- false positive rate per rule (the alert-fatigue literature places the trust
-  collapse threshold near one false alert in two);
+- false positive rate per rule: false positives / independently labelled
+  negative cases (FP / (FP + TN));
+- false discovery proportion: false positives / investigated alerts
+  (FP / (TP + FP), equal to 1 minus precision on that labelled subset);
 - alert-to-incident conversion rate;
 - share of alerts never investigated;
 - triage time.
+
+A zero denominator is reported as unavailable, not zero. Report investigated
+and uninvestigated alert counts separately to expose selection bias. No universal
+alert-fatigue threshold is asserted here: acceptable limits require a documented
+use case, severity and independent domain evidence. This repository publishes
+synthetic engineering checks, not measured financial-review precision or recall.
 
 ## Truth set construction
 
@@ -75,6 +83,7 @@ See `tests/test_metamorphic_invariants.py` for the executable form.
 
 The golden set CLI exits non-zero on any failure and `--fail-on-review`
 provides a stricter release gate. Continuous integration runs the full unit
-suite and the golden set on every change; published metrics are recomputed
-when the truth set version changes, and each published table cites the truth
-set version it was computed on.
+suite and synthetic conformance cases on every change. A future publication of
+domain metrics must identify the labelled truth-set version, reviewed cases,
+method and limits, and recompute the metrics when that truth set changes. This
+requirement is not a claim that an expert-labelled benchmark already exists.

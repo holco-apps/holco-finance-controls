@@ -1,6 +1,6 @@
 # Maintainer handoff
 
-Current public release: **0.7.0**, 2026-09-28.
+Current public release: **0.7.1**, 2026-09-28.
 
 Start with [README](README.md), then [ARCHITECTURE](ARCHITECTURE.md),
 [MCP](MCP.md) and the exact [pack reference](REFERENCE.md).
@@ -90,3 +90,16 @@ as NOT_RUN; mandatory machine-readable reason_code on INCONCLUSIVE/NOT_RUN;
 aggregate_amounts against sub-tolerance splitting; doctrine mapping and
 measurement protocol documents; metamorphic invariant tests. Suite: 123 tests.
 Regenerate spec/protocol-release.json whenever a normative document changes.
+
+## Review reconciliation — 0.7.1
+
+[Review disposition](docs/REVIEW-FOLLOWUP.md) links prior findings to executable
+regressions and remaining limits. Existing findings were checked against 0.7.0;
+the scope/dependency protections are now included in the public package.
+No domain precision/recall, independently authenticated approval or freshness
+assurance is inferred from passing synthetic tests. Keep old compatible runtimes
+for historical plans. This public release does not update a hosted deployment.
+
+Verification on 28 September: 145 tests pass, including actual MCP stdio transport.
+Local cyclic components are fully enumerated; unsupported formula syntax remains
+inconclusive. Limits are deliberate input bounds, not domain assurance.

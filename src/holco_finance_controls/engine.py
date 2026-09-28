@@ -192,6 +192,8 @@ class Engine:
                     exclusions=["external source authenticity", "business plausibility", "legal compliance"],
                     required_review="trusted operator sign-off; not provided by MCP")
         if snapshot is not None:
+            if pack == "excel_snapshot" and policy.get("required_scope") != snapshot["scope"]:
+                raise ValueError("required scope differs from observed snapshot")
             body["snapshot_scope"] = {k: snapshot[k] for k in ("sheet", "scope", "captured_at")}
             body["declared_equations"] = snapshot.get("checks", [])
             body["exclusions"] += ["full workbook coverage", "formula recalculation", "external dependencies", "automatic formula correction"]

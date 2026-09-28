@@ -13,7 +13,7 @@ from xml.etree import ElementTree as ET
 
 MAX_BYTES = 10 * 1024 * 1024
 MAX_CELLS = 500_000
-VERSION = "0.7.0"
+VERSION = "0.7.1"
 
 # Machine-readable reason codes. Any INCONCLUSIVE or NOT_RUN result must carry
 # one: a regulator does not accept "the computer could not conclude" without
@@ -38,7 +38,7 @@ CATALOG = {
     "dossier_review_xlsx": ["source_scope", "reconciliations", "variations", "explanations", "review_coverage"],
     "dossier_review": ["source_scope", "reconciliations", "variations", "explanations", "review_coverage"],
     "excel_reconciliation": ["comparison_scope", "mapped_amounts"],
-    "excel_snapshot": ["snapshot_scope", "cell_errors", "formula_references", "declared_equations"],
+    "excel_snapshot": ["snapshot_scope", "cell_errors", "formula_references", "formula_dependencies", "declared_equations"],
     "reconciliation_csv": ["population", "amounts", "aggregate_amounts"],
     "fec_tsv": ["population", "dates", "amounts", "entry_balance", "duplicates"],
     "workbook_xlsx": ["population", "stored_errors", "broken_references", "formula_caches"],

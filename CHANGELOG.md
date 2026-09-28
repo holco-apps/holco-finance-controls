@@ -1,5 +1,20 @@
 # Releases
 
+## 0.7.1 (2026-09-28)
+
+- Restore bounded Excel rectangle validation and exact approved-scope binding.
+- Add local formula dependency findings, with iterative traversal for long chains;
+  qualified/structured references are inconclusive and cannot create false local cycles.
+- Expose scope constraints in the machine-readable input contract.
+- Correct an unsupported numerical alert-fatigue claim; distinguish false positive
+  rate from false discovery proportion and make missing calibration explicit.
+- Document snapshot freshness, adapter trust and semantic manipulation of reviewers.
+- Add plan-mutation invariants and publish the review disposition with test pointers.
+
+Compatibility: findings and implementation identity change. Create new plans/databases
+for 0.7.1 and retain the original compatible runtime for older plans and reports.
+No stored result is retroactively revalidated. No additional runtime dependency.
+
 ## 0.7.0 (2026-09-28)
 
 - numeric_stability locates its findings. The control reported a count of

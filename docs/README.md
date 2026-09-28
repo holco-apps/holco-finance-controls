@@ -42,3 +42,5 @@ A **requirement** states expected behaviour. A **pack** groups executable checks
 A **golden vector** supplies a fixed input and expected result. A **conformance
 profile** tests only its declared scope. None of these counts is a reliability
 percentage or a professional certification.
+
+- [Review follow-up and remaining boundaries](REVIEW-FOLLOWUP.md)
