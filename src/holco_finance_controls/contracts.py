@@ -20,7 +20,8 @@ def input_contracts():
         'reconciliation_csv': contract([source('expected_and_observed', dict(format='UTF-8 CSV', columns=['id','expected','observed'], limits=dict(rows=100000), amounts='finite decimal strings; unique nonempty IDs'))]),
         'fec_tsv': contract([source('journal_entries', dict(format='UTF-8 TSV', columns=['JournalCode','EcritureNum','EcritureDate','Debit','Credit'], dates='YYYYMMDD', amounts='finite decimal strings, nonnegative; debit and credit cannot both be nonzero', limits=dict(rows=100000)))]),
         'workbook_xlsx': contract([source('workbook', XLSX)]),
-        'workbook_comparison': contract([source('before', XLSX), source('after', XLSX)]),
+        'workbook_comparison': contract([source('before', XLSX), source('after', XLSX)],
+            optional_policy=dict(evidence_cap='integer 1..10000; how many divergent and uncomparable cells are located inline, default 100. Counts are never capped.')),
         'excel_snapshot': contract([source('observed_sheet', SNAPSHOT)], snapshot_policy),
         'excel_reconciliation': contract([
             source('left', dict(**SNAPSHOT, comparisons='Required for meaningful checks: [{id,left:"A1",right:"B1"}]; stored in this left snapshot. Maximum 500.')),

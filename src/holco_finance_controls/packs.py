@@ -53,6 +53,51 @@ class InputLimitError(ValueError):
         super().__init__(f"input limit exceeded: {name} maximum {maximum}")
 
 
+# How many located findings a control reports inline. Matches the existing cap used by the
+# snapshot controls (`addresses=…[:100]`), so every pack answers "where" the same way.
+# The cap never hides its own effect: controls also report how many findings were omitted.
+EVIDENCE_CAP = 100
+
+# A caller that must audit every location, rather than read the first hundred, may raise the
+# cap through the plan policy. Bounded, because an unbounded evidence list turns a control
+# result into an unbounded payload. The bound matches the snapshot pack's cell limit.
+MAX_EVIDENCE_CAP = 10_000
+
+
+def evidence_cap(policy):
+    """Resolve the located-findings cap from a plan policy. Default 100, hard bound 10 000.
+
+    Rejects rather than clamps: a caller that asked for 50 000 locations and silently received
+    10 000 would compute a recall against a truncated set and never know it.
+    """
+    if not policy or "evidence_cap" not in policy:
+        return EVIDENCE_CAP
+    cap = policy["evidence_cap"]
+    if isinstance(cap, bool) or not isinstance(cap, int) or not 0 < cap <= MAX_EVIDENCE_CAP:
+        raise ValueError(f"evidence_cap must be an integer in 1..{MAX_EVIDENCE_CAP}")
+    return cap
+
+
+def cell_order(key):
+    """Sort key giving a stable, human-ordered walk over (sheet, A1) cell references.
+
+    Two reasons this exists, and both matter more than they look:
+
+    1. **Reproducibility.** Cells are collected in a set union, and set iteration order over
+       tuples of strings varies between processes. A capped list of findings drawn from an
+       unordered walk would report a *different* 100 cells on every run, from identical
+       inputs. A control whose evidence changes without its inputs changing is not a control.
+    2. **Readability.** Plain string ordering puts V10 before V9. Splitting the column letters
+       from the row number keeps a reviewer walking the sheet the way they read it.
+    """
+    sheet, coord = key
+    match = re.fullmatch(r"([A-Z]{1,3})([0-9]+)", coord)
+    if not match:  # unreachable: coordinates are validated at parse time
+        return (sheet, "", 0, coord)
+    column, row = match.groups()
+    return (sheet, len(column), column, int(row))
+
+
 def number(value: str) -> Decimal:
     try:
         result = Decimal(value.strip().replace(",", "."))
@@ -172,6 +217,11 @@ def execute(pack: str, code: str, sources: list[bytes], tolerance: str, policy=N
     tol = number(tolerance)
     if tol < 0:
         raise ValueError("tolerance must be nonnegative")
+    # Resolved here, deliberately outside the try below. That handler turns ValueError into
+    # INCONCLUSIVE/INVALID_INPUT, which means "this source cannot be interpreted". A caller
+    # who passes an unusable evidence_cap would then be told the client's workbook is at
+    # fault. A caller error must surface as a caller error.
+    cap = evidence_cap(policy)
     try:
         if pack == "financial_workbook":
             from .financial_workbook import control
@@ -196,21 +246,42 @@ def execute(pack: str, code: str, sources: list[bytes], tolerance: str, policy=N
                 other, _ = workbook(sources[1])
                 changed = missing = compared = 0
                 largest = Decimal(0)
-                for key in cells.keys() | other.keys():
+                # A count is not a finding. "521 cells differ" tells a reviewer that something
+                # is wrong and nothing about where, so it cannot be acted on, defended to an
+                # auditor, or scored against an expected set of locations. Both outcomes are
+                # therefore located: the cells that moved, and the cells that could not be
+                # compared at all, since the latter bound what this control is able to see.
+                divergences, uncomparable = [], []
+                for key in sorted(cells.keys() | other.keys(), key=cell_order):
                     a, b = cells.get(key), other.get(key)
                     if a is None or b is None:
                         missing += 1
+                        if len(uncomparable) < cap:
+                            uncomparable.append(dict(sheet=key[0], cell=key[1],
+                                                     reason="absent from one workbook"))
                     elif a[0] == "n" and b[0] == "n" and a[1] is not None and b[1] is not None:
                         delta = abs(number(a[1]) - number(b[1]))
                         compared += 1
-                        changed += delta > tol
                         largest = max(largest, delta)
+                        if delta > tol:
+                            changed += 1
+                            if len(divergences) < cap:
+                                divergences.append(dict(sheet=key[0], cell=key[1],
+                                                        left=a[1], right=b[1], delta=str(delta)))
                     else:
                         # Equal missing caches, errors or unsupported text are not numeric evidence.
                         missing += 1
+                        if len(uncomparable) < cap:
+                            uncomparable.append(dict(sheet=key[0], cell=key[1],
+                                                     reason="not numeric on both sides"))
                 status = "FAIL" if changed else "INCONCLUSIVE" if missing or not compared else "PASS"
                 return result(code, dict(compared=compared, above_tolerance=changed,
-                                         uncomparable=missing, maximum_absolute_delta=str(largest)),
+                                         uncomparable=missing, maximum_absolute_delta=str(largest),
+                                         divergences=divergences,
+                                         divergences_omitted=changed - len(divergences),
+                                         uncomparable_locations=uncomparable,
+                                         uncomparable_omitted=missing - len(uncomparable),
+                                         evidence_cap=cap),
                               dict(absolute_tolerance=str(tol), same_population=True), status,
                               reason_code="MISSING_EVIDENCE" if status == "INCONCLUSIVE" else None)
             count = stats[code]

@@ -10,7 +10,7 @@ from threading import RLock
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .packs import CATALOG, EXCLUDABLE, MAX_BYTES, VERSION, execute, number, result
+from .packs import CATALOG, EXCLUDABLE, MAX_BYTES, VERSION, evidence_cap, execute, number, result
 
 
 def canonical(value):
@@ -152,10 +152,16 @@ class Engine:
         if tol < 0:
             raise ValueError("tolerance must be nonnegative")
         policy = policy or {}
-        if set(policy) - {"objective", "allowed_tools", "required_tools", "required_period", "required_currency", "required_scope", "pnl_mapping"}:
+        if set(policy) - {"objective", "allowed_tools", "required_tools", "required_period", "required_currency", "required_scope", "pnl_mapping", "evidence_cap"}:
             raise ValueError("unsupported policy fields")
         if "pnl_mapping" in policy and (pack != "financial_workbook" or not isinstance(policy["pnl_mapping"], str) or len(policy["pnl_mapping"]) > 200):
             raise ValueError("invalid financial mapping")
+        # Validated at planning time, not only at execution: a plan is what gets recorded and
+        # signed, so an unusable value must be refused before it reaches a signed plan body.
+        if "evidence_cap" in policy:
+            if pack != "workbook_comparison":
+                raise ValueError("evidence_cap applies to workbook_comparison only")
+            evidence_cap(policy)
         for key in ("objective", "required_period", "required_currency", "required_scope"):
             if key in policy and (not isinstance(policy[key], str) or not 1 <= len(policy[key]) <= 100):
                 raise ValueError("request criteria must be bounded nonempty strings")
