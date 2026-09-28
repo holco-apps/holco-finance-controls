@@ -1,6 +1,6 @@
 # Maintainer handoff
 
-Current public release: **0.6.0**, 2026-09-20.
+Current public release: **0.7.0**, 2026-09-28.
 
 Start with [README](README.md), then [ARCHITECTURE](ARCHITECTURE.md),
 [MCP](MCP.md) and the exact [pack reference](REFERENCE.md).

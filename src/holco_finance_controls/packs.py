@@ -13,7 +13,7 @@ from xml.etree import ElementTree as ET
 
 MAX_BYTES = 10 * 1024 * 1024
 MAX_CELLS = 500_000
-VERSION = "0.6.0"
+VERSION = "0.7.0"
 
 # Machine-readable reason codes. Any INCONCLUSIVE or NOT_RUN result must carry
 # one: a regulator does not accept "the computer could not conclude" without

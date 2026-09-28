@@ -1,10 +1,10 @@
 {
   "schema": "holco.protocol-release/1",
   "protocol_version": "1.3.0",
-  "reference_version": "0.6.0",
+  "reference_version": "0.7.0",
   "status": "experimental",
   "documents": {
-    "CONTROL_PROTOCOL.md": "e4724c7eaab212b89ca006fa4b1630fdeb4b0f780e4098150f6de45cf8f92ff1",
+    "CONTROL_PROTOCOL.md": "0f9dbfba916e384d8934b77b2c4eb71bade4a73633221b48bfc788fefa62d5db",
     "CONTROL_CATALOG.md": "285d433f2971bff6e5ec9ecf33e65631e14aa5eb341eb6e3b784723862f3fff4",
     "spec/control-catalog.json": "18325fb89db303da6de358767ac21d1a02bf09259f70331d6b610b47f1226079"
   },

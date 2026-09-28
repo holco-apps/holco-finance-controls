@@ -132,6 +132,14 @@ does not add tools to HOLCO's deployed MCP.
   unsupported text/shared-string cells. This conservative whole-workbook pack does
   not resolve text values; use explicit observed-worksheet mappings for a targeted
   financial comparison. Same file contents do not establish engine independence.
+  `numeric_stability` names what it flags: `divergences` (sheet, cell, both values,
+  delta) and `uncomparable_locations` (sheet, cell, reason). Both lists are capped
+  at 100 entries and report what they omitted; the counts themselves are never
+  capped. A caller that must audit every location raises the cap with the optional
+  `evidence_cap` policy field (1..10000), which is refused rather than clamped.
+  Note what the located evidence does **not** cover: a cell that moves from a number
+  to a spreadsheet error is reported as uncomparable, not as a divergence, because
+  this control compares numeric values only.
 
 XLSX is base64-encoded for MCP transport. Large files should be registered by
 the trusted local adapter, avoiding a multi-megabyte round trip through an LLM.

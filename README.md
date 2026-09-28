@@ -91,7 +91,18 @@ verdict. Returning `PASS` everywhere fails the suite.
 
 ## What is implemented?
 
-**Reference 0.6.0 · Protocol 1.3.0 · Alpha · MIT.**
+**Reference 0.7.0 · Protocol 1.3.0 · Alpha · MIT.**
+
+New in 0.7.0: `numeric_stability` says **where**. It reported a count of cells
+above tolerance and no address, which a reviewer cannot act on and an auditor
+cannot be shown, and which reduces any measurement to comparing a count to a
+count. Results now carry `divergences` (sheet, cell, both values, delta) and
+`uncomparable_locations`, the latter because that set is what bounds the
+control's recall ceiling. Evidence is capped at 100 inline and reports what it
+omitted; counts are never capped, and an optional `evidence_cap` policy
+(1..10000) serves callers auditing every location. The walk is sorted, because
+set-union order varies between processes and a capped list would otherwise
+report a different hundred cells per run from identical inputs.
 
 New in 0.6.0: a default-deny universal control layer (a plan may only exclude
 explicitly excludable controls, through typed, authored, timestamped exclusion

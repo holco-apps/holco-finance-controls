@@ -1,5 +1,33 @@
 # Releases
 
+## 0.7.0 (2026-09-28)
+
+- numeric_stability locates its findings. The control reported a count of
+  cells above tolerance and no address: a reviewer could not act on it, an
+  auditor could not be shown it, and a measurement could only compare a count
+  to a count, yielding no precision and a recall that never established that
+  the cells found were the cells expected. Results now carry divergences
+  (sheet, cell, both values, delta) and uncomparable_locations (sheet, cell,
+  reason), the latter because that set is what bounds the control's recall
+  ceiling and must be auditable.
+- Evidence lists are capped at 100 inline, matching the snapshot controls, and
+  report divergences_omitted and uncomparable_omitted: the cap never hides its
+  own effect. Counts are never capped.
+- Deterministic evidence. Cells were walked in set-union order, which varies
+  between processes, so a capped list reported a different hundred cells per
+  run from identical inputs. The walk is now sorted by sheet, then column
+  width and letters, then row, which is also the order a reviewer reads.
+  Constrained by a test across two PYTHONHASHSEED values.
+- New optional workbook_comparison policy field evidence_cap (1..10000) for
+  callers auditing every location. Refused rather than clamped, and validated
+  at planning time: a caller silently receiving a truncated set would compute
+  a recall against it and never know. It is resolved outside the handler that
+  maps ValueError to INVALID_INPUT, so a caller error is not reported as an
+  uninterpretable client workbook.
+- No new runtime dependency. Protocol version unchanged: the additions are
+  additive fields on observed.
+- New databases/plans required: implementation identity changed.
+
 ## 0.6.0 (2026-09-20)
 
 - Default-deny universal control layer: a plan may only exclude controls its

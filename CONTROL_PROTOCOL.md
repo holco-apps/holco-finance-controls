@@ -1,6 +1,6 @@
 # HOLCO Financial Control Protocol
 
-Version **1.3.0** · experimental specification · reference implementation **0.6.0**
+Version **1.3.0** · experimental specification · reference implementation **0.7.0**
 
 Normative terms: MUST / MUST NOT are requirements; SHOULD permits a documented
 exception. Protocol, implementation and conformance profiles have separate versions.
